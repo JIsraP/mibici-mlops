@@ -2,14 +2,18 @@ ipython
 jupyterlab
 loguru
 matplotlib
+mlflow==3.17.1
 notebook
 numpy
 pandas
+pyarrow
 pip
 pytest
 python-dotenv
+requests
 ruff
 scikit-learn
+seaborn
 tqdm
 typer
 -e .

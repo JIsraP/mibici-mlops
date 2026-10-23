@@ -3,7 +3,7 @@
 #################################################################################
 
 PROJECT_NAME = mibici-mlops
-PYTHON_VERSION = 3.12
+PYTHON_VERSION = 3.13
 PYTHON_INTERPRETER = python
 
 #################################################################################
@@ -61,10 +61,37 @@ create_environment:
 #################################################################################
 
 
-## Make dataset
+## Descargar los CSV de 2025 y el catalogo de estaciones
+.PHONY: download
+download:
+	$(PYTHON_INTERPRETER) -m mibici.dataset download
+
+## Limpiar viajes y registrar v0 y v1 en MLflow (variantes estricta y laxa)
 .PHONY: data
-data: requirements
-	$(PYTHON_INTERPRETER) mibici/dataset.py
+data:
+	$(PYTHON_INTERPRETER) -m mibici.dataset main --variant estricta
+	$(PYTHON_INTERPRETER) -m mibici.dataset main --variant laxa
+
+## Construir demanda y variables, registrar v2 y v3
+.PHONY: features
+features:
+	$(PYTHON_INTERPRETER) -m mibici.features --variant estricta
+	$(PYTHON_INTERPRETER) -m mibici.features --variant laxa
+
+## Comparar lineas base entre variantes de datos
+.PHONY: baseline
+baseline:
+	$(PYTHON_INTERPRETER) -m mibici.modeling.train --variant estricta
+	$(PYTHON_INTERPRETER) -m mibici.modeling.train --variant laxa
+
+## Figuras del EDA
+.PHONY: plots
+plots:
+	$(PYTHON_INTERPRETER) -m mibici.plots --variant estricta
+
+## Tuberia completa
+.PHONY: pipeline
+pipeline: download data features baseline plots
 
 
 #################################################################################
