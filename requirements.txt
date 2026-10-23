@@ -5,3 +5,5 @@ ruff
 -e .
 requests
 beautifulsoup4
+pandas
+mlflow
