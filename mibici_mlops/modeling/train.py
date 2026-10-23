@@ -5,7 +5,7 @@ construidas con cada variante de limpieza, siempre contra la misma verdad (valid
 variante estricta), para saber si la limpieza cambia la senal.
 
 Uso:
-    python -m mibici.modeling.train --variant laxa
+    python -m mibici_mlops.modeling.train --variant laxa
 """
 
 from loguru import logger
@@ -14,9 +14,9 @@ import numpy as np
 import pandas as pd
 import typer
 
-from mibici.config import EXPERIMENT_BASELINE, MLFLOW_TRACKING_URI, PROCESSED_DATA_DIR
-from mibici.features import TARGETS
-from mibici.tracking import file_sha256
+from mibici_mlops.config import EXPERIMENT_BASELINE, MLFLOW_TRACKING_URI, PROCESSED_DATA_DIR
+from mibici_mlops.features import TARGETS
+from mibici_mlops.tracking import file_sha256
 
 app = typer.Typer()
 

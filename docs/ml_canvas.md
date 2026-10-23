@@ -4,7 +4,7 @@ Plantilla editable para la Fase 1 del proyecto (TC5061). Sigue la estructura de 
 
 | Campo | Valor |
 |---|---|
-| Equipo | Equipo XX |
+| Equipo | Equipo 17 |
 | Versión del canvas | 0.1 (borrador) |
 | Dataset | Datos abiertos MiBici, https://mibici.net/en/open-data/ |
 | Periodo de construcción | enero a diciembre de 2025 |

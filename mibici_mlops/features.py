@@ -1,7 +1,7 @@
 """Agregacion por estacion y hora, variables del modelo y preprocesamiento.
 
 Uso:
-    python -m mibici.features --variant estricta   # registra v2 (demanda) y v3 (variables)
+    python -m mibici_mlops.features --variant estricta   # registra v2 (demanda) y v3 (variables)
 """
 
 from pathlib import Path
@@ -16,9 +16,9 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 import typer
 
-from mibici.config import HOLIDAYS_2025, INTERIM_DATA_DIR, PROCESSED_DATA_DIR, TRAIN_END
-from mibici.dataset import load_stations
-from mibici.tracking import DatasetVersioner, file_sha256
+from mibici_mlops.config import HOLIDAYS_2025, INTERIM_DATA_DIR, PROCESSED_DATA_DIR, TRAIN_END
+from mibici_mlops.dataset import load_stations
+from mibici_mlops.tracking import DatasetVersioner, file_sha256
 
 app = typer.Typer()
 

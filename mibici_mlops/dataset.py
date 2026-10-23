@@ -1,8 +1,8 @@
 """Descarga, lectura y limpieza de los viajes de MiBici.
 
 Uso:
-    python -m mibici.dataset download   # baja los CSV de references/urls_2025.txt a data/raw
-    python -m mibici.dataset main       # limpia y registra las versiones v0 y v1 en MLflow
+    python -m mibici_mlops.dataset download   # baja los CSV de references/urls_2025.txt a data/raw
+    python -m mibici_mlops.dataset main       # limpia y registra las versiones v0 y v1 en MLflow
 """
 
 from dataclasses import dataclass
@@ -14,8 +14,8 @@ import pandas as pd
 import requests
 import typer
 
-from mibici.cleaning import CleaningRules, TripCleaner
-from mibici.config import (
+from mibici_mlops.cleaning import CleaningRules, TripCleaner
+from mibici_mlops.config import (
     INTERIM_DATA_DIR,
     MIBICI_BASE_URL,
     RAW_DATA_DIR,
@@ -24,7 +24,7 @@ from mibici.config import (
     TRIPS_PATTERN,
     URLS_FILE,
 )
-from mibici.tracking import DatasetVersioner
+from mibici_mlops.tracking import DatasetVersioner
 
 app = typer.Typer()
 

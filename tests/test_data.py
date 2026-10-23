@@ -1,9 +1,9 @@
 import pandas as pd
 import pytest
 
-from mibici.cleaning import CleaningRules, TripCleaner
-from mibici.dataset import detect_encoding
-from mibici.features import build_demand
+from mibici_mlops.cleaning import CleaningRules, TripCleaner
+from mibici_mlops.dataset import detect_encoding
+from mibici_mlops.features import build_demand
 
 
 def raw_trip(viaje, inicio, fin, origen="1", destino="2", genero="M", anio="1990"):

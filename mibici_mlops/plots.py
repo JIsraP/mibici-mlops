@@ -1,7 +1,7 @@
 """Figuras del analisis exploratorio.
 
 Uso:
-    python -m mibici.plots --variant estricta   # escribe reports/figures/*.png y reports/eda_*.csv
+    python -m mibici_mlops.plots --variant estricta   # escribe reports/figures/*.png y reports/eda_*.csv
 """
 
 from pathlib import Path
@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 import typer
 
-from mibici.config import FIGURES_DIR, INTERIM_DATA_DIR, PROCESSED_DATA_DIR, REPORTS_DIR
-from mibici.dataset import load_stations
+from mibici_mlops.config import FIGURES_DIR, INTERIM_DATA_DIR, PROCESSED_DATA_DIR, REPORTS_DIR
+from mibici_mlops.dataset import load_stations
 
 app = typer.Typer()
 
@@ -252,7 +252,7 @@ def descriptive_tables(trips: pd.DataFrame, demand: pd.DataFrame, out_dir: Path)
 
 @app.command()
 def main(variant: str = "estricta"):
-    from mibici.dataset import load_raw_trips
+    from mibici_mlops.dataset import load_raw_trips
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     trips = pd.read_parquet(INTERIM_DATA_DIR / f"viajes_limpios_{variant}.parquet")

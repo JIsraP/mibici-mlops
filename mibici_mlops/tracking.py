@@ -9,7 +9,7 @@ from loguru import logger
 import mlflow
 import pandas as pd
 
-from mibici.config import EXPERIMENT_DATA, MIBICI_BASE_URL, MLFLOW_TRACKING_URI
+from mibici_mlops.config import EXPERIMENT_DATA, MIBICI_BASE_URL, MLFLOW_TRACKING_URI
 
 
 def file_sha256(path: Path) -> str:
