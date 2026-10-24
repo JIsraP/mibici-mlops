@@ -162,6 +162,12 @@ Por decidir: confirmar o ajustar esta distribución de roles y las tareas pendie
 | 0.2 | 2026-10-23 | Propuestas de alcance y del rol de validación; revisión de variables y métricas frente al código |
 | 0.3 | 2026-10-23 | Registro de integrantes y propuesta de responsables, actividades e interacción de los roles |
 
+## ML Canvas visual
+
+![Machine Learning Canvas de MiBici — Equipo 17](canvas_mibici.png)
+
+[Ver imagen en tamaño completo](canvas_mibici.png)
+
 ## Pendientes para la entrega
 
 - Acordar los puntos marcados como "Por decidir" y confirmar o ajustar la asignación propuesta de roles.
@@ -169,3 +175,4 @@ Por decidir: confirmar o ajustar esta distribución de roles y las tareas pendie
 - Ejecutar el pipeline completo y conservar la evidencia de MLflow con los datos seleccionados.
 - Preparar la presentación ejecutiva en PDF con las cinco etapas, resultados, roles y conclusiones.
 - Incorporar al PDF la declaración de uso de IA de todos los integrantes. Para esta aportación se utilizó ChatGPT/Codex (GPT-6) como apoyo en revisión de código, depuración del registro de versiones, elaboración de pruebas y documentación.
+
