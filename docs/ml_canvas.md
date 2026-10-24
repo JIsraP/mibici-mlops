@@ -27,33 +27,61 @@ Borrador del ML Canvas de la Fase 1 del proyecto (TC5044), organizado en los die
 
 ## 1. Propuesta de valor
 
-Usuario final: el equipo de operación de MiBici que mueve bicicletas en camionetas entre estaciones. Beneficiario indirecto: la persona usuaria que encuentra una estación vacía cuando quiere salir o llena cuando quiere dejar la bicicleta.
+**Beneficiarias finales:** las personas que utilizan MiBici para sus traslados. **Usuario directo de la herramienta:** el responsable de operación y redistribución, que recibiría estimaciones de salidas y llegadas por estación y hora.
 
-Problema: la demanda no es simétrica. En la mañana las bicicletas salen de zonas habitacionales y se acumulan en zonas de oficinas, y en la tarde ocurre lo contrario. Si la redistribución se hace por reacción, las estaciones ya están vacías o llenas cuando llega la camioneta.
+### Problema desde la experiencia de las personas
 
-La solución busca anticipar, por estación y por hora, cuántos viajes saldrán y cuántos llegarán en las próximas 24 horas, para que el plan de redistribución se arme antes de que ocurra el desbalance.
+Una persona que necesita iniciar o terminar un traslado enfrenta incertidumbre cuando no encuentra una bicicleta utilizable o un espacio de devolución. Puede tener que esperar, caminar a otra estación, utilizar otro transporte o abandonar el intento. Al devolver una bicicleta, la falta de espacios puede obligarla a buscar otro punto y completar un trayecto adicional.
 
-Alcance propuesto: entregar una tabla de demanda prevista por estación y hora. En la Fase 1 se entrega la preparación de datos y su evaluación con líneas base. La priorización de estaciones y las rutas de redistribución quedan fuera de esta fase. Sin datos de inventario disponible no se puede afirmar que una estación vaya a quedar vacía o llena.
+Estas situaciones pueden ocasionar retrasos, pérdida de conexiones, gastos imprevistos y menor confianza para organizar el día. Son afectaciones plausibles que justifican estudiar el problema; no son consecuencias cuantificadas en el dataset actual.
 
-Por decidir: si la salida del proyecto se limita al pronóstico o incluye también una lista priorizada de estaciones en una fase posterior.
+Las preguntas frecuentes de MiBici contemplan el caso de una estación sin puertos disponibles y la búsqueda de otra estación o la espera [1]. Esto documenta una situación de servicio, pero no su frecuencia ni el número de personas afectadas. El EDA muestra diferencias por horario y estación [3, 4]; no permite afirmar, sin evidencia adicional, que correspondan a traslados entre zonas habitacionales y de oficinas o a estaciones que quedaron vacías o llenas.
+
+### Valor esperado y alcance
+
+La solución busca anticipar cuántos viajes registrados saldrán y llegarán por estación y hora durante el día siguiente. Esa información podría ayudar al supervisor a revisar necesidades operativas con anticipación. Se espera que, al combinarla con disponibilidad y recursos operativos, contribuya a reducir búsquedas y esperas evitables y a dar mayor certeza a los traslados. Esa relación entre pronóstico, intervención y beneficio requiere una evaluación posterior.
+
+En la Fase 1 se trabaja en la preparación de datos, el análisis exploratorio y la evaluación con líneas base. La salida prevista para etapas posteriores es una tabla de viajes estimados por estación y hora. La priorización de estaciones, las cantidades de traslado, las rutas y la operación en tiempo real quedan fuera de esta fase.
+
+Sin inventario disponible, capacidad utilizable y movimientos de redistribución no se puede determinar si una estación quedará vacía o llena. Tampoco se puede medir con los viajes registrados cuántas personas esperaron o abandonaron el servicio.
+
+**Por decidir:** confirmar el alcance de la Fase 1 y si una etapa posterior se limita al pronóstico o incorpora recomendaciones de priorización con datos operativos adicionales.
 
 ## 2. Tarea de aprendizaje automático
 
-Tipo: regresión supervisada sobre series de tiempo, una serie por estación.
+Tipo: regresión supervisada sobre series de tiempo, con conteos por estación y hora. Se propone un modelo global que aprenda de las series de todas las estaciones, como se describe en el bloque 7.
 
-Entrada: estación, fecha y hora, más el historial reciente de esa estación.
+Entrada: estación, fecha y hora, más el historial de viajes disponible al emitir el pronóstico.
 
-Salida: dos valores por estación y hora, viajes que salen (Origen_Id) y viajes que llegan (Destino_Id). La diferencia entre ambos es el cambio neto de inventario, que es lo que le importa a la operación.
+Salida: dos valores por estación y hora: viajes que salen (`Origen_Id`) y viajes que llegan (`Destino_Id`). Se pronostican viajes registrados, no personas distintas ni toda la demanda que intentó usar el servicio.
 
-La implementación actual utiliza una granularidad de una hora y dos variables objetivo: salidas y llegadas. Se propone conservar esta estructura y usar el neto como indicador derivado, sin agregar una clasificación de riesgo en esta fase.
+El indicador derivado se define como **balance de viajes = llegadas − salidas**. Describe el efecto neto de los viajes sobre la cantidad de bicicletas; no equivale al inventario real, porque no incluye la cantidad inicial, los traslados operativos ni las bicicletas fuera de servicio. Un saldo al final de una hora tampoco indica si la estación se agotó en algún momento intermedio.
 
-Por decidir: confirmar la granularidad horaria y las dos variables objetivo, o ajustar el alcance a franjas de 30 minutos o a la predicción del neto.
+La documentación técnica del equipo describe una granularidad de una hora y dos variables objetivo: salidas y llegadas. Se propone conservar esta estructura y usar el balance como indicador derivado, sin agregar una clasificación de riesgo en esta fase.
+
+**Por decidir:** confirmar la granularidad horaria y las dos variables objetivo, o ajustar el alcance a franjas de 30 minutos o a la predicción del balance.
 
 ## 3. Decisiones
 
-Cada noche se genera el pronóstico del día siguiente y con él se ordenan las estaciones por desbalance esperado. El supervisor de operación asigna rutas de camioneta empezando por las de mayor desbalance en la franja de las 7 a las 10 y de las 18 a las 21.
+Se propone que el supervisor revise la estimación de viajes para cada hora del día siguiente y la compare con las bicicletas disponibles, los espacios libres y las condiciones de cada estación. Así podría identificar qué estaciones necesitan atención y en qué horarios. El supervisor tomaría la decisión final, considerando el personal y los vehículos disponibles para mover bicicletas, las necesidades de mantenimiento y cualquier situación que los datos no reflejen, como cierres viales o eventos.
 
-La predicción apoya la decisión, no la reemplaza: el supervisor puede ajustar por eventos que el modelo no conoce (cierres viales, partidos, marchas).
+Este es un uso futuro del pronóstico. La Fase 1 no genera ni asigna rutas de camioneta y el balance de viajes, por sí solo, no basta para decidir cuántas bicicletas trasladar. Las franjas de 07:00 a 09:59 y de 18:00 a 20:59 se conservan como periodos de interés propuestos por el equipo, sujetos a revisión con el EDA.
+
+### Criterios sociales para una etapa posterior
+
+Se propone no priorizar estaciones únicamente por su volumen histórico. Un uso bajo puede relacionarse con menor demanda, disponibilidad insuficiente u otras barreras; el dataset de viajes no permite distinguir esas causas. La operación tendría que definir criterios de cobertura y niveles mínimos de servicio, revisar estaciones nuevas y analizar diferencias entre zonas y horarios, considerando también las conexiones con otros transportes.
+
+Para orientar esas decisiones se necesitarían datos operativos y evidencia de las necesidades de las personas. No se deben inferir condiciones socioeconómicas individuales a partir del patrón de viajes de una estación.
+
+### Evidencia del análisis exploratorio
+
+El mapa del EDA muestra balances distintos entre estaciones durante las mañanas de lunes a viernes. Esto respalda estudiar ambos flujos, salidas y llegadas, para apoyar una revisión operativa posterior [4].
+
+![Balance promedio matutino de viajes por estación](../reports/figures/06_mapa_desbalance_manana.png)
+
+*Figura del EDA del equipo. Periodo de 07:00 a 09:59 de lunes a viernes. Azul: más llegadas que salidas; rojo: más salidas que llegadas. Aunque la leyenda original use expresiones como «acumula» o «se vacía», el mapa no demuestra que una estación haya quedado llena o vacía y no representa disponibilidad en tiempo real.*
+
+**Por decidir:** acordar con la operación los criterios de priorización y los datos necesarios si se aborda esta función en una etapa posterior.
 
 ## 4. Fuentes de datos
 
