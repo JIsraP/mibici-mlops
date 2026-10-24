@@ -7,6 +7,17 @@ Proyecto de análisis y predicción de la demanda del sistema de bicicletas púb
 - Bitácora de versiones de datos: [docs/versionado_datos.md](docs/versionado_datos.md)
 - Datos: [datos abiertos de MiBici](https://www.mibici.net/es/datos-abiertos/). En la Fase 1 se usan los viajes de enero a diciembre de 2025 y el catálogo de estaciones de septiembre de 2026; enero a septiembre de 2026 queda reservado para probar el modelo en fases posteriores.
 
+## Equipo 17
+
+| Integrante | Matrícula | Correo institucional |
+|---|---|---|
+| Francisco Gabriel Rodríguez González | A00702893 | A00702893@tec.mx |
+| Joel Rodríguez Becerril | A01795945 | A01795945@tec.mx |
+| José Israel Pérez Ontiveros | A01423294 | A01423294@tec.mx |
+| Ricardo Portilla Corona | A01797352 | A01797352@tec.mx |
+
+La asignación propuesta de roles y su interacción se describen en el [ML Canvas](docs/ml_canvas.md#roles-responsables).
+
 ## Objetivos
 
 - Preparar un entorno de desarrollo reproducible.

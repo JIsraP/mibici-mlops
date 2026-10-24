@@ -5,7 +5,7 @@ Borrador del ML Canvas de la Fase 1 del proyecto (TC5044), organizado en los die
 | Campo | Valor |
 |---|---|
 | Equipo | Equipo 17 |
-| Versión del canvas | 0.2 (borrador) |
+| Versión del canvas | 0.3 (borrador) |
 | Dataset | Datos abiertos MiBici, https://mibici.net/en/open-data/ |
 | Periodo de construcción | enero a diciembre de 2025 |
 | Periodo reservado | enero a septiembre de 2026 (prueba fuera de tiempo y monitoreo en fases posteriores) |
@@ -109,17 +109,22 @@ Lote nocturno: a las 23:00 se generan las predicciones de las 24 horas siguiente
 
 ## Roles responsables
 
-Los siguientes roles describen las responsabilidades del trabajo. Por decidir: asignar los responsables de cada rol entre los integrantes del equipo.
+Los integrantes y sus datos institucionales se encuentran en el [README](../README.md#equipo-17).
 
-| Rol | Actividades | Bloques que mantiene |
-|---|---|---|
-| Responsable de negocio y del canvas | Definir el problema, el alcance y las decisiones que apoya el proyecto | 1, 3 |
-| Data engineer | Descargar, limpiar y versionar los datos | 4, 5 |
-| Data scientist | Explorar los datos, construir variables y evaluar resultados | 2, 6, 9 |
-| ML engineer | Organizar la ejecución, el entrenamiento y el monitoreo | 7, 8, 10 |
-| Validación y trazabilidad de datos | Verificar el registro de versiones, los reintentos y la consistencia documental | Transversal |
+La siguiente asignación es una propuesta para revisión del equipo. Orienta las tareas pendientes y no sustituye la evidencia de las aportaciones realizadas. Cada integrante puede apoyar otros roles.
 
-Interacción entre roles: el responsable de negocio define la necesidad; Data Engineering prepara y versiona los datos; Data Science explora y transforma las variables; ML Engineering organiza la ejecución. La validación comprueba que las ejecuciones fallidas o descartadas puedan repetirse y devuelve los hallazgos al responsable del módulo.
+| Rol | Responsable propuesto | Actividades en la Fase 1 | Bloques del Canvas |
+|---|---|---|---|
+| Responsable de negocio y del Canvas | Joel Rodríguez Becerril | Coordinar la definición del problema y la propuesta de valor y cerrar los acuerdos de alcance | 1, 3 |
+| Data engineer | José Israel Pérez Ontiveros | Organizar la descarga e inspección de los datos, revisar su cobertura y calidad, documentar las reglas de limpieza y consolidar el PDF con las evidencias del equipo | 4, 5 y documentación |
+| Data scientist | Francisco Gabriel Rodríguez González | Realizar el EDA, construir la demanda por estación y hora, preparar las variables y comparar las variantes de datos mediante las líneas base | 2, 6, 9 |
+| ML engineer (validación y trazabilidad) | Ricardo Portilla Corona | Corregir el registro y la reutilización de versiones en MLflow, agregar y ejecutar pruebas de reintentos y revisar la consistencia de la documentación | 7, 8, 10 y validación transversal |
+
+Interacción entre roles: Joel coordina los acuerdos del problema y del alcance. José Israel prepara los datos y documenta su calidad; Francisco utiliza esas versiones para el análisis, las variables y las líneas base. Ricardo comprueba la trazabilidad y las pruebas del flujo y devuelve los hallazgos a los responsables de datos y análisis. Cada integrante aporta sus resultados y evidencias para que José Israel consolide la presentación en PDF; el equipo completo la revisa antes de entregarla.
+
+En esta fase, los bloques de construcción de modelos, predicciones y monitoreo describen el diseño para etapas posteriores. La asignación de ML Engineering no implica implementar todavía el modelo final, el servicio de predicción ni el monitoreo en producción.
+
+Por decidir: confirmar o ajustar esta distribución de roles y las tareas pendientes antes de cerrar la entrega.
 
 ## Historial de cambios
 
@@ -127,11 +132,11 @@ Interacción entre roles: el responsable de negocio define la necesidad; Data En
 |---|---|---|
 | 0.1 | 2026-10-23 | Definición inicial de los diez bloques |
 | 0.2 | 2026-10-23 | Propuestas de alcance y del rol de validación; revisión de variables y métricas frente al código |
+| 0.3 | 2026-10-23 | Registro de integrantes y propuesta de responsables, actividades e interacción de los roles |
 
 ## Pendientes para la entrega
 
-- Acordar los puntos marcados como "Por decidir" y asignar los responsables de los roles.
-
+- Acordar los puntos marcados como "Por decidir" y confirmar o ajustar la asignación propuesta de roles.
 - Verificar la evidencia de participación y los commits de todos los integrantes.
 - Ejecutar el pipeline completo y conservar la evidencia de MLflow con los datos seleccionados.
 - Preparar la presentación ejecutiva en PDF con las cinco etapas, resultados, roles y conclusiones.
