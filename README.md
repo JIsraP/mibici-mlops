@@ -98,4 +98,12 @@ make pipeline     # descarga, limpieza, variables, líneas base y figuras
 
 ## Estado actual
 
-Fase 1 terminada: análisis de requerimientos, limpieza, EDA, preprocesamiento y versionado de datos. La construcción y evaluación de modelos corresponde a la Fase 2.
+La Fase 1 incluye limpieza, exploración, preprocesamiento y versionado de datos. El [ML Canvas](docs/ml_canvas.md) documenta el alcance y los roles propuestos, junto con las decisiones pendientes del equipo. Para la entrega resta cerrar esos acuerdos, verificar la participación de todos los integrantes y la ejecución completa, y preparar la presentación ejecutiva en PDF. El modelo final se desarrolla en la Fase 2.
+
+Las pruebas de registro de versiones se pueden ejecutar sin descargar MiBici ni iniciar un servidor de MLflow:
+
+```bash
+python -m pytest tests/test_tracking.py
+```
+
+Estas pruebas utilizan una base SQLite y artefactos temporales. Comprueban la reutilización de corridas terminadas y vigentes, el registro de versiones diferentes y los reintentos después de fallos o descartes.

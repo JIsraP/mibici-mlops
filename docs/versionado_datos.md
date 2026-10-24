@@ -1,8 +1,8 @@
 # Bitácora de versiones de datos
 
-Cada versión del dataset es una corrida en el experimento de MLflow `MiBici_Fase1_Versiones_Datos`. La corrida guarda la etiqueta `version`, la huella SHA-256 del archivo, el número de filas y columnas, el esquema con nulos por columna y, según el caso, el reporte de limpieza, el archivo de datos o el preprocesador. Si se vuelve a correr la tubería con los mismos datos, la huella coincide y no se crea una corrida duplicada (`DatasetVersioner._already_logged`).
+Cada versión del dataset es una corrida en el experimento de MLflow `MiBici_Fase1_Versiones_Datos`. La corrida guarda la etiqueta `version`, la huella SHA-256 del archivo, el número de filas y columnas, el esquema con nulos por columna y, según el caso, el reporte de limpieza, el archivo de datos o el preprocesador. Si se vuelve a registrar el mismo nombre de versión y la misma huella, se reutiliza el identificador de una corrida terminada correctamente que no esté marcada como descartada (`DatasetVersioner._existing_run`). Una ejecución fallida o descartada permite un nuevo intento; dos versiones distintas pueden compartir la misma huella sin bloquear su registro. Las nuevas corridas reciben la etiqueta `estado = vigente`.
 
-Los archivos de datos no se suben a GitHub. Para reproducirlos basta con `make pipeline`: descarga los CSV listados en `references/urls_2025.txt` y regenera cada versión. Las huellas permiten comprobar que el resultado es idéntico.
+Los archivos de datos no se suben a GitHub. Para reproducirlos basta con `make pipeline`: descarga los CSV listados en `references/urls_2025.txt` y regenera cada versión. Las huellas permiten comprobar que el resultado es idéntico. El registro conserva las corridas fallidas o descartadas como parte del historial; reutilizar una corrida válida no las elimina.
 
 ## Linaje
 

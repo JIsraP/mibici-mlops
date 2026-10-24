@@ -20,18 +20,25 @@ class DatasetVersioner:
     """Registra versiones de datos en un experimento de MLflow.
 
     Una version queda identificada por la etiqueta `version` (v0, v1, ...) y por la huella
-    SHA-256 de su archivo. Si ya existe una corrida con la misma huella no se duplica.
+    SHA-256 de su archivo. Solo se reutilizan corridas terminadas y no descartadas con
+    el mismo nombre de version y la misma huella.
     """
 
     def __init__(self, experiment: str = EXPERIMENT_DATA, tracking_uri: str = MLFLOW_TRACKING_URI):
         mlflow.set_tracking_uri(tracking_uri)
         self.experiment = mlflow.set_experiment(experiment)
 
-    def _already_logged(self, sha: str) -> bool:
+    def _existing_run(self, version: str, sha: str) -> str | None:
         runs = mlflow.search_runs(
-            [self.experiment.experiment_id], filter_string=f"tags.sha256 = '{sha}'"
+            [self.experiment.experiment_id],
+            filter_string=(
+                f"tags.version = '{version}' AND tags.sha256 = '{sha}' "
+                "AND attributes.status = 'FINISHED'"
+            ),
         )
-        return not runs.empty
+        if "tags.estado" in runs.columns:
+            runs = runs[runs["tags.estado"].fillna("") != "descartada"]
+        return None if runs.empty else runs.iloc[0]["run_id"]
 
     def log_version(
         self,
@@ -44,12 +51,20 @@ class DatasetVersioner:
         metrics: dict | None = None,
         tables: dict[str, pd.DataFrame] | None = None,
         file: Path | None = None,
-    ) -> str | None:
-        if self._already_logged(sha):
-            logger.info(f"{version} con huella {sha[:12]} ya estaba registrada")
-            return None
+    ) -> str:
+        existing_run_id = self._existing_run(version, sha)
+        if existing_run_id is not None:
+            logger.info(f"{version} con huella {sha[:12]} reutiliza la corrida {existing_run_id}")
+            return existing_run_id
         with mlflow.start_run(run_name=version) as run:
-            mlflow.set_tags({"version": version, "sha256": sha, "descripcion": description})
+            mlflow.set_tags(
+                {
+                    "version": version,
+                    "sha256": sha,
+                    "descripcion": description,
+                    "estado": "vigente",
+                }
+            )
             mlflow.log_params({"filas": len(df), "columnas": df.shape[1], **(params or {})})
             if metrics:
                 mlflow.log_metrics(metrics)
@@ -72,7 +87,7 @@ class DatasetVersioner:
             logger.success(f"{version} registrada en MLflow (run {run.info.run_id})")
             return run.info.run_id
 
-    def log_raw(self, raw: pd.DataFrame, files: list) -> str | None:
+    def log_raw(self, raw: pd.DataFrame, files: list) -> str:
         files_table = pd.DataFrame([asdict(f) for f in files])
         sha = hashlib.sha256("".join(files_table["sha256"]).encode()).hexdigest()
         latin = int((files_table["encoding"] == "latin-1").sum())
@@ -86,7 +101,7 @@ class DatasetVersioner:
             tables={"archivos_crudos": files_table},
         )
 
-    def log_clean(self, clean: pd.DataFrame, path: Path, rules, report: list[dict]) -> str | None:
+    def log_clean(self, clean: pd.DataFrame, path: Path, rules, report: list[dict]) -> str:
         report_df = pd.DataFrame(report)
         raw_rows = int(report_df["filas_tras"].iloc[0])
         removed = raw_rows - len(clean)
