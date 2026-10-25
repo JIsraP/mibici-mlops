@@ -2,7 +2,7 @@
 
 En la Fase 1 no se entrena aun el modelo final: se mide que tan bien predicen dos lineas base
 construidas con cada variante de limpieza, siempre contra la misma verdad (validacion de la
-variante estricta), para saber si la limpieza cambia la senal.
+version oficial del data engineer), para saber si la limpieza cambia la senal.
 
 Uso:
     python -m mibici_mlops.modeling.train --variant laxa
@@ -64,7 +64,7 @@ def evaluate(features: pd.DataFrame, truth: pd.DataFrame) -> dict:
 
 
 @app.command()
-def main(variant: str = "estricta", truth_variant: str = "estricta"):
+def main(variant: str = "oficial", truth_variant: str = "oficial"):
     path = PROCESSED_DATA_DIR / f"variables_{variant}.parquet"
     features = pd.read_parquet(path)
     truth_path = PROCESSED_DATA_DIR / f"variables_{truth_variant}.parquet"

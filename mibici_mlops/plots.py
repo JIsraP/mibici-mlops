@@ -1,7 +1,7 @@
 """Figuras del analisis exploratorio.
 
 Uso:
-    python -m mibici_mlops.plots --variant estricta   # escribe reports/figures/*.png y reports/eda_*.csv
+    python -m mibici_mlops.plots --variant oficial    # escribe reports/figures/*.png y reports/eda_*.csv
 """
 
 from pathlib import Path
@@ -251,7 +251,7 @@ def descriptive_tables(trips: pd.DataFrame, demand: pd.DataFrame, out_dir: Path)
 
 
 @app.command()
-def main(variant: str = "estricta"):
+def main(variant: str = "oficial"):
     from mibici_mlops.dataset import load_raw_trips
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
