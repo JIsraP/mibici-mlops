@@ -18,3 +18,5 @@ tqdm
 typer
 -e .
 beautifulsoup4
+pandas
+mlflow
