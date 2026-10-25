@@ -1,0 +1,10 @@
+prueba,resultado,detalle
+horas completas por estacion,cumple,"371 estaciones; esperadas 8,760 horas cada una, minimo 8,760 y maximo 8,760"
+sin estacion-hora repetida,cumple,0 repetidas
+horas dentro de 2025,cumple,0 fuera de rango
+salidas cuadran con viajes,cumple,"salidas 4,529,252; viajes que inician en 2025 4,529,252"
+llegadas cuadran con viajes,cumple,"llegadas 4,529,245; viajes que terminan en 2025 4,529,245 (7 terminan en 2026)"
+salidas por mes cuadran,cumple,0 meses con diferencia
+conteos no negativos,cumple,0 filas negativas
+neto = llegadas - salidas,cumple,revisado en todas las filas
+estaciones en el catalogo,cumple,0 fuera del catalogo []
