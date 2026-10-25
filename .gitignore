@@ -189,7 +189,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-# MLflow
-mlruns/
-mlartifacts/
-mlflow.db
+# MLflow local tracking
+/mlflow.db
+/mlruns/
+/mlartifacts/
