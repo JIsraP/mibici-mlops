@@ -46,3 +46,14 @@ En `MiBici_Fase1_Experimentos_Datos` se calculan dos líneas base de salidas con
 | MAE, misma hora de la semana anterior | 0.974 | 0.954 |
 
 La limpieza estricta mejora poco el error (alrededor de 1 %), lo esperable cuando se quita 2.9 % de los viajes. El promedio histórico supera a la semana anterior en 13 % y es la referencia que el modelo de la Fase 2 debe mejorar.
+
+## Versión oficial y entrada del modelo (25-oct-2026)
+
+El data engineer fijó como versión oficial de 2025 los viajes limpios con banderas: se conservan todos y se agregan `duracion_segundos`, `duracion_no_positiva` y `duracion_mayor_24h`. Los archivos se colocan en `data/external/version_oficial/` (o en la ruta de `MIBICI_OFFICIAL_DIR`). Para modelar solo se excluyen los viajes con `duracion_no_positiva`; los de más de 24 horas se conservan marcados.
+
+| Versión | Archivo | Filas | Qué cambió |
+|---|---|---|---|
+| v1_modelo_oficial | `data/interim/viajes_limpios_oficial.parquet` | 4,529,252 | Versión oficial (4,532,032 viajes) sin los 2,780 de duración no positiva; los 6 de más de 24 horas siguen marcados. |
+| v2_demanda_oficial, v3_variables_oficial | `data/processed/*_oficial.parquet` | 3,249,960 / 3,187,632 | Misma construcción que las otras variantes, a partir de v1_modelo_oficial. |
+
+La tabla de demanda oficial pasa las 9 pruebas de `mibici_mlops.validation` (experimento `MiBici_Fase1_Validacion_Datos`). Contra la versión oficial como verdad, la línea base de promedio histórico tiene un MAE de 0.856; entrenada con la variante estricta baja a 0.848. El análisis de los viajes marcados está en `notebooks/3.0-frg-version-oficial-validacion-marcados.ipynb`.

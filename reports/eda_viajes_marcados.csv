@@ -1,0 +1,6 @@
+categoria,tipo,viajes,pct_del_total,pct_misma_estacion,mediana_min,estaciones
+duracion_no_positiva,bandera oficial (se excluye),2780,0.061,22.5,0.0,344
+duracion_mayor_24h,bandera oficial (se conserva),6,0.0,33.3,1647.62,6
+misma_estacion_menos_2_min,por revisar,123158,2.718,100.0,0.37,371
+distinta_estacion_menos_1_min,por revisar,5807,0.128,0.0,0.03,367
+entre_3_y_24_horas,por revisar,448,0.01,19.6,280.12,218
