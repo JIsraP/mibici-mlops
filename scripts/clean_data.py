@@ -131,6 +131,13 @@ def clean_data():
             f"No se encontraron archivos mensuales en {RAW_DIR}"
         )
 
+    # IMPORTANTE: eliminar salidas anteriores de estos archivos para no
+    # anexar datos viejos ni conservar encabezados sin la nueva columna.
+    for file_path in files:
+        old_output = PROCESSED_DIR / file_path.name
+        if old_output.exists():
+            old_output.unlink()
+
     # Contadores generales.
     input_rows = 0
     output_rows = 0
@@ -140,6 +147,8 @@ def clean_data():
     suspicious_birth_year = 0
     nonpositive_duration = 0
     duration_over_24h = 0
+    same_station_count = 0
+    failed_trip_count = 0
     unparseable_date_rows = 0
     processed_files = 0
 
@@ -331,6 +340,26 @@ def clean_data():
             duration_over_24h += int(
                 chunk["duracion_mayor_24h"].sum()
             )
+            
+            # Normalizar IDs como texto para comparar 12 con "12" correctamente.
+            origin_id = chunk["Origen_Id"].astype("string").str.strip()
+            destination_id = chunk["Destino_Id"].astype("string").str.strip()
+            same_station = (
+                origin_id.notna()
+                & destination_id.notna()
+                & (origin_id == destination_id)
+            )
+
+            # Bandera informativa: no elimina estos viajes.
+            chunk["viaje_fallido"] = (
+                same_station
+                & duration.notna()
+                & (duration > 0)
+                & (duration < 120)
+            )
+
+            same_station_count += int(same_station.sum())
+            failed_trip_count += int(chunk["viaje_fallido"].sum())
 
             # --------------------------------------------------
             # GUARDAR DATOS PROCESADOS
@@ -395,6 +424,8 @@ def clean_data():
                 "Años de nacimiento sospechosos",
                 "Duraciones cero o negativas",
                 "Duraciones mayores a 24 horas",
+                "Viajes con mismo origen y destino",
+                "Viajes marcados como viaje_fallido",
                 "Filas con alguna fecha no interpretable",
                 "Archivos procesados",
             ],
@@ -407,6 +438,8 @@ def clean_data():
                 suspicious_birth_year,
                 nonpositive_duration,
                 duration_over_24h,
+                same_station_count,
+                failed_trip_count,
                 unparseable_date_rows,
                 processed_files,
             ],
@@ -428,6 +461,8 @@ def clean_data():
         "suspicious_birth_year": suspicious_birth_year,
         "nonpositive_duration": nonpositive_duration,
         "duration_over_24h": duration_over_24h,
+        "same_station_trips": same_station_count,
+        "failed_trips": failed_trip_count,
         "unparseable_date_rows": unparseable_date_rows,
         "processed_files": processed_files,
         "duplicate_removal_rate": (
@@ -473,6 +508,10 @@ def main():
                 "duration_handling": (
                     "Conservar viajes sospechosos y agregar "
                     "indicadores"
+                ),
+                "failed_trip_rule": (
+                    "Mismo origen y destino, duracion mayor que 0 "
+                    "y menor que 120 segundos; conservar el viaje"
                 ),
                 "date_formats": (
                     "%Y-%m-%d %H:%M:%S; %d/%m/%Y %H:%M"
