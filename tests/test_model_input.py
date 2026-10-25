@@ -65,3 +65,16 @@ def test_validacion_detecta_horas_faltantes(official_dir):
     report = {r["prueba"]: r for r in validate_demand(demand, model, {1, 2})}
     assert report["horas completas por estacion"]["resultado"] == "no cumple"
     assert report["salidas cuadran con viajes"]["resultado"] == "cumple"
+
+
+def test_lee_bandera_opcional_viaje_fallido(tmp_path):
+    rows = [
+        "1,10,M,1990.0,2025-03-01 08:00:00,2025-03-01 08:01:00,1,1,60.0,False,False,True",
+        "2,11,F,1985.0,2025-03-01 08:00:00,2025-03-01 08:30:00,1,1,1800.0,False,False,False",
+    ]
+    (tmp_path / "datos_abiertos_2025_03.csv").write_text(
+        HEADER + ",viaje_fallido\n" + "\n".join(rows) + "\n", encoding="utf-8"
+    )
+    model, counts = model_trips(load_official_trips(tmp_path)[0])
+    assert len(model) == 2  # la bandera es informativa: no excluye
+    assert counts["marcados_viaje_fallido"] == 1

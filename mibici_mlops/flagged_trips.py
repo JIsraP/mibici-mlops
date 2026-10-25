@@ -29,7 +29,11 @@ def categorize(trips: pd.DataFrame) -> dict[str, tuple[str, pd.Series]]:
     return {
         "duracion_no_positiva": ("bandera oficial (se excluye)", trips["duracion_no_positiva"]),
         "duracion_mayor_24h": ("bandera oficial (se conserva)", trips["duracion_mayor_24h"]),
-        "misma_estacion_menos_2_min": ("por revisar", same & (minutes > 0) & (minutes < 2)),
+        "viaje_fallido": (
+            ("bandera oficial (se conserva)", trips["viaje_fallido"])
+            if "viaje_fallido" in trips
+            else ("por revisar", same & (minutes > 0) & (minutes < 2))
+        ),
         "distinta_estacion_menos_1_min": ("por revisar", ~same & (minutes > 0) & (minutes < 1)),
         "entre_3_y_24_horas": ("por revisar", (minutes > 180) & (minutes <= 1440)),
     }
@@ -113,7 +117,7 @@ def main(directory: Path = OFFICIAL_DATA_DIR):
     table = summary_table(trips, cats)
     table.to_csv(REPORTS_DIR / "eda_viajes_marcados.csv", index=False)
 
-    false_start = cats["misma_estacion_menos_2_min"][1]
+    false_start = cats["viaje_fallido"][1]
     impact = station_impact(trips, false_start, load_stations())
     impact.to_csv(REPORTS_DIR / "eda_viajes_marcados_por_estacion.csv", index=False)
 

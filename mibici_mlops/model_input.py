@@ -35,6 +35,8 @@ OFFICIAL_COLUMNS = {
     "duracion_mayor_24h": "duracion_mayor_24h",
 }
 FLAGS = ["duracion_no_positiva", "duracion_mayor_24h"]
+# Banderas informativas que el data engineer agrego despues; se leen si vienen en los archivos
+OPTIONAL_FLAGS = ["viaje_fallido"]
 EXCLUDE_FOR_MODEL = ["duracion_no_positiva"]
 
 
@@ -45,6 +47,10 @@ def parse_dates(values: pd.Series) -> pd.Series:
     if missing.any():
         dates[missing] = pd.to_datetime(values[missing], format="%d/%m/%Y %H:%M", errors="coerce")
     return dates
+
+
+def present_flags(trips: pd.DataFrame) -> list[str]:
+    return FLAGS + [f for f in OPTIONAL_FLAGS if f in trips.columns]
 
 
 def to_bool(values: pd.Series) -> pd.Series:
@@ -60,7 +66,9 @@ def load_official_trips(directory: Path = OFFICIAL_DATA_DIR) -> tuple[pd.DataFra
     if missing:
         raise ValueError(f"La version oficial no cumple el contrato, faltan: {sorted(missing)}")
 
-    trips = trips[list(OFFICIAL_COLUMNS)].rename(columns=OFFICIAL_COLUMNS).reset_index(drop=True)
+    optional = [f for f in OPTIONAL_FLAGS if f in trips.columns]
+    trips = trips[list(OFFICIAL_COLUMNS) + optional].rename(columns=OFFICIAL_COLUMNS)
+    trips = trips.reset_index(drop=True)
     trips["inicio"] = parse_dates(trips["inicio"])
     trips["fin"] = parse_dates(trips["fin"])
     for col in ["viaje_id", "usuario_id", "origen_id", "destino_id"]:
@@ -70,7 +78,7 @@ def load_official_trips(directory: Path = OFFICIAL_DATA_DIR) -> tuple[pd.DataFra
     )
     trips["genero"] = trips["genero"].replace({"": "Desconocido", "NULL": "Desconocido"})
     trips["duracion_segundos"] = pd.to_numeric(trips["duracion_segundos"], errors="coerce")
-    for flag in FLAGS:
+    for flag in present_flags(trips):
         trips[flag] = to_bool(trips[flag])
         if trips[flag].isna().any():
             raise ValueError(f"La bandera {flag} tiene valores que no son True o False")
@@ -85,7 +93,7 @@ def model_trips(trips: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     out["mismo_origen_destino"] = out["origen_id"] == out["destino_id"]
     out["edad"] = (out["inicio"].dt.year - out["anio_nacimiento"]).astype("Int64")
     out["genero"] = out["genero"].astype("category")
-    counts = {f"marcados_{f}": int(trips[f].sum()) for f in FLAGS}
+    counts = {f"marcados_{f}": int(trips[f].sum()) for f in present_flags(trips)}
     counts["excluidos_para_modelo"] = int(excluded.sum())
     return out.reset_index(drop=True), counts
 
