@@ -1,9 +1,22 @@
+ipython
+jupyterlab
+loguru
+matplotlib
+mlflow==3.17.1
+notebook
+numpy
+pandas
+pyarrow
 pip
 pytest
 python-dotenv
-ruff
--e .
 requests
+ruff
+scikit-learn
+seaborn
+tqdm
+typer
+-e .
 beautifulsoup4
 pandas
 mlflow

@@ -3,7 +3,7 @@
 #################################################################################
 
 PROJECT_NAME = mibici_mlops
-PYTHON_VERSION = 3.10
+PYTHON_VERSION = 3.11
 PYTHON_INTERPRETER = python
 
 #################################################################################
@@ -47,12 +47,51 @@ test:
 	python -m pytest tests
 
 
+## Set up Python interpreter environment
+.PHONY: create_environment
+create_environment:
+	@bash -c "if [ ! -z `which virtualenvwrapper.sh` ]; then source `which virtualenvwrapper.sh`; mkvirtualenv $(PROJECT_NAME) --python=$(PYTHON_INTERPRETER); else mkvirtualenv.bat $(PROJECT_NAME) --python=$(PYTHON_INTERPRETER); fi"
+	@echo ">>> New virtualenv created. Activate with:\nworkon $(PROJECT_NAME)"
+	
+
 
 
 #################################################################################
 # PROJECT RULES                                                                 #
 #################################################################################
 
+
+## Descargar los CSV de 2025 y el catalogo de estaciones
+.PHONY: download
+download:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.dataset download
+
+## Limpiar viajes y registrar v0 y v1 en MLflow (variantes estricta y laxa)
+.PHONY: data
+data:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.dataset main --variant estricta
+	$(PYTHON_INTERPRETER) -m mibici_mlops.dataset main --variant laxa
+
+## Construir demanda y variables, registrar v2 y v3
+.PHONY: features
+features:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.features --variant estricta
+	$(PYTHON_INTERPRETER) -m mibici_mlops.features --variant laxa
+
+## Comparar lineas base entre variantes de datos
+.PHONY: baseline
+baseline:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --variant estricta
+	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --variant laxa
+
+## Figuras del EDA
+.PHONY: plots
+plots:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.plots --variant estricta
+
+## Tuberia completa
+.PHONY: pipeline
+pipeline: download data features baseline plots
 
 
 #################################################################################
