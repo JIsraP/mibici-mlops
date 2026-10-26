@@ -72,26 +72,39 @@ data:
 	$(PYTHON_INTERPRETER) -m mibici_mlops.dataset main --variant estricta
 	$(PYTHON_INTERPRETER) -m mibici_mlops.dataset main --variant laxa
 
+## Entrada del modelo desde la version oficial con banderas (registra v1_modelo_oficial)
+.PHONY: oficial
+oficial:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.model_input
+
 ## Construir demanda y variables, registrar v2 y v3
 .PHONY: features
 features:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.features --variant oficial
 	$(PYTHON_INTERPRETER) -m mibici_mlops.features --variant estricta
 	$(PYTHON_INTERPRETER) -m mibici_mlops.features --variant laxa
 
-## Comparar lineas base entre variantes de datos
+## Validar la tabla de demanda contra los viajes
+.PHONY: validate
+validate:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.validation --variant oficial
+
+## Comparar lineas base entre variantes de datos contra la version oficial
 .PHONY: baseline
 baseline:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --variant oficial
 	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --variant estricta
 	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --variant laxa
 
-## Figuras del EDA
+## Figuras del EDA y EDA de viajes marcados
 .PHONY: plots
 plots:
-	$(PYTHON_INTERPRETER) -m mibici_mlops.plots --variant estricta
+	$(PYTHON_INTERPRETER) -m mibici_mlops.plots --variant oficial
+	$(PYTHON_INTERPRETER) -m mibici_mlops.flagged_trips
 
-## Tuberia completa
+## Tuberia completa (la version oficial la genera el data engineer en data/external/version_oficial)
 .PHONY: pipeline
-pipeline: download data features baseline plots
+pipeline: download data oficial features validate baseline plots
 
 
 #################################################################################

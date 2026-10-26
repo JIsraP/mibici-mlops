@@ -1,7 +1,7 @@
 """Agregacion por estacion y hora, variables del modelo y preprocesamiento.
 
 Uso:
-    python -m mibici_mlops.features --variant estricta   # registra v2 (demanda) y v3 (variables)
+    python -m mibici_mlops.features --variant oficial    # registra v2 (demanda) y v3 (variables)
 """
 
 from pathlib import Path
@@ -140,7 +140,7 @@ def build_preprocessor() -> ColumnTransformer:
 
 
 @app.command()
-def main(variant: str = "estricta"):
+def main(variant: str = "oficial"):
     trips = pd.read_parquet(INTERIM_DATA_DIR / f"viajes_limpios_{variant}.parquet")
     stations = load_stations()
     versioner = DatasetVersioner()

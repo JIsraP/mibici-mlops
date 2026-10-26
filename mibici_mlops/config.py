@@ -42,6 +42,10 @@ TRIP_COLUMNS = [
     "destino_id",
 ]
 
+# Version oficial del data engineer: CSV mensuales con banderas de duracion
+OFFICIAL_DATA_DIR = Path(os.getenv("MIBICI_OFFICIAL_DIR", EXTERNAL_DATA_DIR / "version_oficial"))
+OFFICIAL_PATTERN = "datos_abiertos_2025_*.csv"
+
 # Particion temporal: entrenamiento enero-octubre, validacion noviembre-diciembre de 2025
 TRAIN_END = "2025-11-01"
 
