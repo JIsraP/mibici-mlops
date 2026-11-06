@@ -39,24 +39,53 @@ CATEGORICAL = ["dia_semana", "zona"]
 
 
 def build_demand(trips: pd.DataFrame) -> pd.DataFrame:
-    """Cuenta salidas y llegadas por estacion y hora, rellenando con 0 las horas sin viajes."""
-    out = trips.groupby(["origen_id", trips["inicio"].dt.floor("h")]).size()
-    inn = trips.groupby(["destino_id", trips["fin"].dt.floor("h")]).size()
-    out.index.names = inn.index.names = ["estacion_id", "fecha_hora"]
+    """Cuenta salidas y llegadas por estación y hora durante 2025."""
 
-    stations = np.union1d(trips["origen_id"].unique(), trips["destino_id"].unique())
-    hours = pd.date_range("2025-01-01", "2025-12-31 23:00", freq="h")
-    grid = pd.MultiIndex.from_product([stations, hours], names=["estacion_id", "fecha_hora"])
+    inicio_2025 = trips[
+        (trips["inicio"] >= "2025-01-01") &
+        (trips["inicio"] < "2026-01-01")
+    ]
 
-    demand = pd.DataFrame(
-        {
-            "salidas": out.reindex(grid, fill_value=0),
-            "llegadas": inn.reindex(grid, fill_value=0),
-        }
-    ).reset_index()
+    fin_2025 = trips[
+        (trips["fin"] >= "2025-01-01") &
+        (trips["fin"] < "2026-01-01")
+    ]
+
+    out = inicio_2025.groupby(
+        ["origen_id", inicio_2025["inicio"].dt.floor("h")]
+    ).size()
+
+    inn = fin_2025.groupby(
+        ["destino_id", fin_2025["fin"].dt.floor("h")]
+    ).size()
+
+    out.index.names = ["estacion_id", "fecha_hora"]
+    inn.index.names = ["estacion_id", "fecha_hora"]
+
+    stations = np.union1d(
+        inicio_2025["origen_id"].unique(),
+        fin_2025["destino_id"].unique()
+    )
+
+    hours = pd.date_range(
+        "2025-01-01",
+        "2025-12-31 23:00",
+        freq="h"
+    )
+
+    grid = pd.MultiIndex.from_product(
+        [stations, hours],
+        names=["estacion_id", "fecha_hora"]
+    )
+
+    demand = pd.DataFrame({
+        "salidas": out.reindex(grid, fill_value=0),
+        "llegadas": inn.reindex(grid, fill_value=0)
+    }).reset_index()
+
     demand["neto"] = demand["llegadas"] - demand["salidas"]
-    return demand
 
+    return demand
 
 class FeatureBuilder:
     """Agrega calendario, rezagos y atributos de estacion a la tabla de demanda.
@@ -107,6 +136,13 @@ class FeatureBuilder:
     def fit_transform(self, demand: pd.DataFrame) -> pd.DataFrame:
         df = self.add_calendar(demand.copy())
         profiles = self.station_profiles(df)
+
+        if profiles.shape[0] < 2 or profiles.shape[1] < 2:
+            raise ValueError("No hay suficientes datos para aplicar PCA.")
+
+        if not np.isfinite(profiles.values).all():
+            raise ValueError("Los perfiles contienen valores inválidos para PCA.")
+
         comps = self.pca.fit_transform(profiles.values)
         pcs = pd.DataFrame(comps, index=profiles.index, columns=["perfil_pc1", "perfil_pc2"])
 
@@ -115,9 +151,21 @@ class FeatureBuilder:
             self.stations[["estacion_id", "latitud", "longitud", "capacidad", "zona"]],
             on="estacion_id",
             how="left",
+            validate="many_to_one"
         )
+        if df[["latitud", "longitud", "capacidad", "zona"]].isna().any().any():
+            raise ValueError("Hay estaciones sin atributos en el catálogo.")
         df = df.merge(pcs, left_on="estacion_id", right_index=True, how="left")
         df = df.dropna(subset=["salidas_lag_168", "llegadas_media_7d"])
+        required_features = NUMERIC + BINARY + CATEGORICAL
+
+        missing = df[required_features].isna().sum()
+        missing = missing[missing > 0]
+
+        if not missing.empty:
+            raise ValueError(
+                f"Hay valores faltantes en las variables del modelo:\n{missing}"
+            )
         df["particion"] = np.where(
             df["fecha_hora"] < self.train_end, "entrenamiento", "validacion"
         )

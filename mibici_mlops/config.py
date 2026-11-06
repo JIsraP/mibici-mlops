@@ -61,7 +61,7 @@ HOLIDAYS_2025 = [
 ]
 
 # MLflow
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
 EXPERIMENT_DATA = "MiBici_Fase1_Versiones_Datos"
 EXPERIMENT_BASELINE = "MiBici_Fase1_Experimentos_Datos"
 

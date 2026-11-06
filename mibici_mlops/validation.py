@@ -103,6 +103,7 @@ def main(variant: str = "oficial"):
     station_ids = set(load_stations()["estacion_id"])
 
     report = pd.DataFrame(validate_demand(demand, trips, station_ids))
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     out = REPORTS_DIR / f"validacion_demanda_{variant}.csv"
     report.to_csv(out, index=False)
     failed = int((report["resultado"] == "no cumple").sum())
