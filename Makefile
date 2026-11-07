@@ -89,12 +89,21 @@ features:
 validate:
 	$(PYTHON_INTERPRETER) -m mibici_mlops.validation --variant oficial
 
-## Comparar lineas base entre variantes de datos contra la version oficial
+## Lineas base contra la version oficial (experimento de la Fase 2)
 .PHONY: baseline
 baseline:
-	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --variant oficial
-	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --variant estricta
-	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --variant laxa
+	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.baselines
+
+## Comparar lineas base entre variantes de limpieza (experimento de la Fase 1)
+.PHONY: baseline-variants
+baseline-variants:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.baselines --variant estricta --experiment MiBici_Fase1_Experimentos_Datos
+	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.baselines --variant laxa --experiment MiBici_Fase1_Experimentos_Datos
+
+## Tabla y figuras comparativas de todas las corridas del experimento de modelos
+.PHONY: compare
+compare:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.compare
 
 ## Figuras del EDA y EDA de viajes marcados
 .PHONY: plots
