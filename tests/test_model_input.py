@@ -56,7 +56,7 @@ def test_validacion_de_demanda(official_dir):
     demand = build_demand(model)
     report = {r["prueba"]: r for r in validate_demand(demand, model, {1, 2})}
     assert all(r["resultado"] == "cumple" for r in report.values())
-    assert "1 terminan en 2026" in report["llegadas cuadran con viajes"]["detalle"]
+    assert "1 terminan despues" in report["llegadas cuadran con viajes"]["detalle"]
 
 
 def test_validacion_detecta_horas_faltantes(official_dir):

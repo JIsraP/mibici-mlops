@@ -13,7 +13,14 @@ import numpy as np
 import pandas as pd
 import typer
 
-from mibici_mlops.config import FIGURES_DIR, INTERIM_DATA_DIR, PROCESSED_DATA_DIR, REPORTS_DIR
+from mibici_mlops.config import (
+    DATA_YEAR,
+    FIGURES_DIR,
+    INTERIM_DATA_DIR,
+    MORNING_HOURS,
+    PROCESSED_DATA_DIR,
+    REPORTS_DIR,
+)
 from mibici_mlops.dataset import load_stations
 
 app = typer.Typer()
@@ -61,7 +68,7 @@ def trips_by_month(trips: pd.DataFrame, out_dir: Path) -> Path:
     ax.bar(counts.index, counts.values, color=SERIES[0], width=0.7)
     ax.set_xticks(range(1, 13), MESES)
     ax.set_ylabel("Miles de viajes")
-    ax.set_title("Viajes por mes, 2025")
+    ax.set_title(f"Viajes por mes, {DATA_YEAR}")
     ax.grid(axis="x", visible=False)
     for m, v in counts.items():
         ax.text(m, v + 4, f"{v:.0f}", ha="center", fontsize=8, color=INK_2)
@@ -120,7 +127,7 @@ def top_stations(trips: pd.DataFrame, stations: pd.DataFrame, out_dir: Path, n: 
     top["nombre"] = top["nombre"].str.slice(0, 42)
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.barh(top["nombre"][::-1], top["count"][::-1] / 1000, color=SERIES[0], height=0.7)
-    ax.set_xlabel("Miles de salidas en 2025")
+    ax.set_xlabel(f"Miles de salidas en {DATA_YEAR}")
     ax.set_title(f"Las {n} estaciones con más salidas")
     ax.grid(axis="y", visible=False)
     ax.tick_params(axis="y", colors=INK_2, labelsize=8)
@@ -129,7 +136,8 @@ def top_stations(trips: pd.DataFrame, stations: pd.DataFrame, out_dir: Path, n: 
 
 def morning_net_map(demand: pd.DataFrame, stations: pd.DataFrame, out_dir: Path) -> Path:
     am = demand[
-        demand["fecha_hora"].dt.hour.isin([7, 8, 9]) & (demand["fecha_hora"].dt.day_of_week < 5)
+        demand["fecha_hora"].dt.hour.isin(MORNING_HOURS)
+        & (demand["fecha_hora"].dt.day_of_week < 5)
     ]
     n_days = am["fecha_hora"].dt.date.nunique()
     net = (am.groupby("estacion_id")["neto"].sum() / n_days).rename("neto").reset_index()
@@ -158,7 +166,7 @@ def morning_net_map(demand: pd.DataFrame, stations: pd.DataFrame, out_dir: Path)
 
 def pca_profiles(features: pd.DataFrame, out_dir: Path) -> Path:
     """Colorea cada estacion por su indice de desbalance matutino para interpretar el PC1."""
-    am = features[features["hora"].isin([7, 8, 9]) & (features["es_fin_semana"] == 0)]
+    am = features[features["hora"].isin(MORNING_HOURS) & (features["es_fin_semana"] == 0)]
     tot = am.groupby("estacion_id")[["salidas", "llegadas"]].sum()
     index = ((tot["llegadas"] - tot["salidas"]) / (tot["llegadas"] + tot["salidas"])).rename("i")
     st = features.drop_duplicates("estacion_id").merge(

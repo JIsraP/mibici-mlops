@@ -17,6 +17,8 @@ from mibici_mlops.config import (
     MLFLOW_TRACKING_URI,
     PROCESSED_DATA_DIR,
     REPORTS_DIR,
+    YEAR_END,
+    YEAR_START,
 )
 from mibici_mlops.dataset import load_stations
 from mibici_mlops.tracking import file_sha256
@@ -24,7 +26,7 @@ from mibici_mlops.tracking import file_sha256
 app = typer.Typer()
 
 EXPERIMENT_VALIDATION = "MiBici_Fase1_Validacion_Datos"
-YEAR_START, YEAR_END = pd.Timestamp("2025-01-01"), pd.Timestamp("2026-01-01")
+PERIOD_START, PERIOD_END = pd.Timestamp(YEAR_START), pd.Timestamp(YEAR_END)
 
 
 def check(name: str, passed: bool, detail: str) -> dict:
@@ -34,7 +36,7 @@ def check(name: str, passed: bool, detail: str) -> dict:
 def validate_demand(
     demand: pd.DataFrame, trips: pd.DataFrame, station_ids: set[int]
 ) -> list[dict]:
-    hours = pd.date_range(YEAR_START, YEAR_END, freq="h", inclusive="left")
+    hours = pd.date_range(PERIOD_START, PERIOD_END, freq="h", inclusive="left")
     n_stations = demand["estacion_id"].nunique()
     results = []
 
@@ -50,28 +52,28 @@ def validate_demand(
     dup = int(demand.duplicated(["estacion_id", "fecha_hora"]).sum())
     results.append(check("sin estacion-hora repetida", dup == 0, f"{dup} repetidas"))
     out_range = int((~demand["fecha_hora"].between(hours[0], hours[-1])).sum())
-    results.append(check("horas dentro de 2025", out_range == 0, f"{out_range} fuera de rango"))
+    results.append(check("horas dentro del año", out_range == 0, f"{out_range} fuera de rango"))
 
-    starts_2025 = trips["inicio"].between(YEAR_START, YEAR_END, inclusive="left")
-    ends_2025 = trips["fin"].between(YEAR_START, YEAR_END, inclusive="left")
+    starts_in_period = trips["inicio"].between(PERIOD_START, PERIOD_END, inclusive="left")
+    ends_in_period = trips["fin"].between(PERIOD_START, PERIOD_END, inclusive="left")
     results.append(
         check(
             "salidas cuadran con viajes",
-            int(demand["salidas"].sum()) == int(starts_2025.sum()),
-            f"salidas {int(demand['salidas'].sum()):,}; viajes que inician en 2025 "
-            f"{int(starts_2025.sum()):,}",
+            int(demand["salidas"].sum()) == int(starts_in_period.sum()),
+            f"salidas {int(demand['salidas'].sum()):,}; viajes que inician en el año "
+            f"{int(starts_in_period.sum()):,}",
         )
     )
     results.append(
         check(
             "llegadas cuadran con viajes",
-            int(demand["llegadas"].sum()) == int(ends_2025.sum()),
-            f"llegadas {int(demand['llegadas'].sum()):,}; viajes que terminan en 2025 "
-            f"{int(ends_2025.sum()):,} ({int((~ends_2025).sum())} terminan en 2026)",
+            int(demand["llegadas"].sum()) == int(ends_in_period.sum()),
+            f"llegadas {int(demand['llegadas'].sum()):,}; viajes que terminan en el año "
+            f"{int(ends_in_period.sum()):,} ({int((~ends_in_period).sum())} terminan despues)",
         )
     )
 
-    month_trips = trips.loc[starts_2025].groupby(trips["inicio"].dt.month).size()
+    month_trips = trips.loc[starts_in_period].groupby(trips["inicio"].dt.month).size()
     month_demand = demand.groupby(demand["fecha_hora"].dt.month)["salidas"].sum()
     bad_months = int((month_trips.reindex(range(1, 13), fill_value=0) != month_demand).sum())
     results.append(

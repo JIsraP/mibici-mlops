@@ -15,7 +15,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import typer
 
-from mibici_mlops.config import FIGURES_DIR, OFFICIAL_DATA_DIR, REPORTS_DIR
+from mibici_mlops.config import (
+    FALSE_START_MAX_MIN,
+    FIGURES_DIR,
+    LONG_TRIP_MIN,
+    MAX_TRIP_MIN,
+    MIN_STATION_TRIPS_PLOT,
+    OFFICIAL_DATA_DIR,
+    REPORTS_DIR,
+    SHORT_TRIP_MAX_MIN,
+)
 from mibici_mlops.dataset import load_stations
 from mibici_mlops.model_input import load_official_trips
 from mibici_mlops.plots import INK_2, SERIES, _save
@@ -32,10 +41,16 @@ def categorize(trips: pd.DataFrame) -> dict[str, tuple[str, pd.Series]]:
         "viaje_fallido": (
             ("bandera oficial (se conserva)", trips["viaje_fallido"])
             if "viaje_fallido" in trips
-            else ("por revisar", same & (minutes > 0) & (minutes < 2))
+            else ("por revisar", same & (minutes > 0) & (minutes < FALSE_START_MAX_MIN))
         ),
-        "distinta_estacion_menos_1_min": ("por revisar", ~same & (minutes > 0) & (minutes < 1)),
-        "entre_3_y_24_horas": ("por revisar", (minutes > 180) & (minutes <= 1440)),
+        "distinta_estacion_menos_1_min": (
+            "por revisar",
+            ~same & (minutes > 0) & (minutes < SHORT_TRIP_MAX_MIN),
+        ),
+        "entre_3_y_24_horas": (
+            "por revisar",
+            (minutes > LONG_TRIP_MIN) & (minutes <= MAX_TRIP_MIN),
+        ),
     }
 
 
@@ -97,7 +112,7 @@ def hourly_share_plot(trips: pd.DataFrame, mask: pd.Series, out_dir: Path) -> Pa
 
 
 def station_share_plot(impact: pd.DataFrame, out_dir: Path, n: int = 15) -> Path:
-    top = impact[impact["salidas"] >= 1000].nlargest(n, "pct_marcadas")
+    top = impact[impact["salidas"] >= MIN_STATION_TRIPS_PLOT].nlargest(n, "pct_marcadas")
     labels = top["nombre"].str.slice(0, 42)
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.barh(labels[::-1], top["pct_marcadas"][::-1], color=SERIES[1], height=0.7)
