@@ -16,7 +16,14 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 import typer
 
-from mibici_mlops.config import HOLIDAYS_2025, INTERIM_DATA_DIR, PROCESSED_DATA_DIR, TRAIN_END
+from mibici_mlops.config import (
+    DEMAND_END,
+    DEMAND_START,
+    HOLIDAYS_2025,
+    INTERIM_DATA_DIR,
+    PROCESSED_DATA_DIR,
+    TRAIN_END,
+)
 from mibici_mlops.dataset import load_stations
 from mibici_mlops.tracking import DatasetVersioner, file_sha256
 
@@ -41,51 +48,35 @@ CATEGORICAL = ["dia_semana", "zona"]
 def build_demand(trips: pd.DataFrame) -> pd.DataFrame:
     """Cuenta salidas y llegadas por estación y hora durante 2025."""
 
-    inicio_2025 = trips[
-        (trips["inicio"] >= "2025-01-01") &
-        (trips["inicio"] < "2026-01-01")
-    ]
+    inicio_2025 = trips[(trips["inicio"] >= DEMAND_START) & (trips["inicio"] < DEMAND_END)]
 
-    fin_2025 = trips[
-        (trips["fin"] >= "2025-01-01") &
-        (trips["fin"] < "2026-01-01")
-    ]
+    fin_2025 = trips[(trips["fin"] >= DEMAND_START) & (trips["fin"] < DEMAND_END)]
 
-    out = inicio_2025.groupby(
-        ["origen_id", inicio_2025["inicio"].dt.floor("h")]
-    ).size()
+    out = inicio_2025.groupby(["origen_id", inicio_2025["inicio"].dt.floor("h")]).size()
 
-    inn = fin_2025.groupby(
-        ["destino_id", fin_2025["fin"].dt.floor("h")]
-    ).size()
+    inn = fin_2025.groupby(["destino_id", fin_2025["fin"].dt.floor("h")]).size()
 
     out.index.names = ["estacion_id", "fecha_hora"]
     inn.index.names = ["estacion_id", "fecha_hora"]
 
-    stations = np.union1d(
-        inicio_2025["origen_id"].unique(),
-        fin_2025["destino_id"].unique()
-    )
+    stations = np.union1d(inicio_2025["origen_id"].unique(), fin_2025["destino_id"].unique())
 
     hours = pd.date_range(
-        "2025-01-01",
-        "2025-12-31 23:00",
-        freq="h"
+        DEMAND_START,
+        pd.Timestamp(DEMAND_END) - pd.Timedelta(hours=1),
+        freq="h",
     )
 
-    grid = pd.MultiIndex.from_product(
-        [stations, hours],
-        names=["estacion_id", "fecha_hora"]
-    )
+    grid = pd.MultiIndex.from_product([stations, hours], names=["estacion_id", "fecha_hora"])
 
-    demand = pd.DataFrame({
-        "salidas": out.reindex(grid, fill_value=0),
-        "llegadas": inn.reindex(grid, fill_value=0)
-    }).reset_index()
+    demand = pd.DataFrame(
+        {"salidas": out.reindex(grid, fill_value=0), "llegadas": inn.reindex(grid, fill_value=0)}
+    ).reset_index()
 
     demand["neto"] = demand["llegadas"] - demand["salidas"]
 
     return demand
+
 
 class FeatureBuilder:
     """Agrega calendario, rezagos y atributos de estacion a la tabla de demanda.
@@ -151,7 +142,7 @@ class FeatureBuilder:
             self.stations[["estacion_id", "latitud", "longitud", "capacidad", "zona"]],
             on="estacion_id",
             how="left",
-            validate="many_to_one"
+            validate="many_to_one",
         )
         if df[["latitud", "longitud", "capacidad", "zona"]].isna().any().any():
             raise ValueError("Hay estaciones sin atributos en el catálogo.")
@@ -163,9 +154,7 @@ class FeatureBuilder:
         missing = missing[missing > 0]
 
         if not missing.empty:
-            raise ValueError(
-                f"Hay valores faltantes en las variables del modelo:\n{missing}"
-            )
+            raise ValueError(f"Hay valores faltantes en las variables del modelo:\n{missing}")
         df["particion"] = np.where(
             df["fecha_hora"] < self.train_end, "entrenamiento", "validacion"
         )
