@@ -48,8 +48,9 @@ Para que `compare.py` incluya la corrida sin cambios:
 - Métricas de `evaluate.score_frame(validacion, {"salidas": pred_salidas, "llegadas": pred_llegadas})`, que ya devuelve los nombres anteriores.
 - Recomendado: artefacto `predicciones_validacion.parquet` con `estacion_id`, `fecha_hora`, `pred_salidas` y `pred_llegadas`, para el desglose por hora y segmento.
 - Semilla: `config.RANDOM_SEED`.
+- Etiqueta `validacion_sha256` con la huella del Parquet usado para evaluar la corrida. En corridas anteriores se usa `dataset_sha256` cuando el entrenamiento y la validación proceden de la misma versión.
 
-Después de registrar las corridas: `make compare` (o `python -m mibici_mlops.modeling.compare`) actualiza `reports/comparacion_modelos.csv`, `reports/diagnostico_error.csv` y las figuras 13 y 14; `notebooks/4.0-frg-evaluacion-modelos.ipynb` las muestra.
+Después de registrar las corridas, `make compare` actualiza `reports/comparacion_modelos.csv`, `reports/diagnostico_error.csv` y las figuras 13 y 14. La columna `apto_registro` indica si el modelo cumple la meta de mejora y el criterio de llegadas. `make register` registra el mejor candidato de esa misma comparación.
 
 ## Texto sugerido para el bloque 9 del ML Canvas
 

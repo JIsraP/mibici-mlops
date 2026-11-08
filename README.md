@@ -201,10 +201,12 @@ El catálogo de octubre de 2026 del portal no incluye la estación histórica 24
 Con `variables_oficial.parquet` y `demanda_estacion_hora_oficial.parquet` en `data/processed/`, ejecuta estos pasos usando el mismo backend de MLflow:
 
 ```bash
-make baseline train compare register
+make baseline && make train && make compare && make register
 ```
 
 Se ajusta cada candidato con enero a septiembre y se eligen sus hiperparámetros con octubre. Después se reentrena con enero a octubre y se mide con noviembre y diciembre. Cada corrida guarda el pipeline de salidas y llegadas, las pruebas de ajuste, las métricas y las predicciones de validación en `MiBici_Fase2_Modelos`. La comparación escribe la tabla y las figuras en `reports/`.
+
+Si ya registraste las corridas, ejecuta `make compare && make register` para reutilizarlas. Ambos pasos filtran por la huella del Parquet de validación y usan el mismo criterio de selección. La columna `apto_registro` identifica los modelos que cumplen la meta y el criterio de llegadas.
 
 `make register` registra el mejor modelo en `MiBici_Demanda` con los hiperparámetros y métricas de su corrida. Se exige una mejora de al menos 15 % en el MAE de salidas en pico y que el MAE de llegadas en pico sea igual o menor que el de la línea base.
 

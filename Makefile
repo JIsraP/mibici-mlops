@@ -110,7 +110,7 @@ train:
 register:
 	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --register-only
 
-## Tabla y figuras comparativas de todas las corridas del experimento de modelos
+## Tabla y figuras comparativas de las corridas de la versión oficial de validación
 .PHONY: compare
 compare:
 	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.compare

@@ -16,6 +16,7 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 INTERIM_DATA_DIR = DATA_DIR / "interim"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
+OFFICIAL_FEATURES_PATH = PROCESSED_DATA_DIR / "variables_oficial.parquet"
 
 MODELS_DIR = PROJ_ROOT / "models"
 

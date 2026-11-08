@@ -18,11 +18,11 @@ import typer
 from mibici_mlops.config import (
     EXPERIMENT_MODELS,
     MLFLOW_TRACKING_URI,
+    OFFICIAL_FEATURES_PATH,
     PROCESSED_DATA_DIR,
     RANDOM_SEED,
     REGISTERED_MODEL_NAME,
     SELECTION_METRIC,
-    TARGET_IMPROVEMENT_PCT,
     TRAIN_END,
     TUNING_START,
     YEAR_END,
@@ -36,7 +36,7 @@ from mibici_mlops.features import (
     build_preprocessor,
 )
 from mibici_mlops.modeling.compare import comparison_table, load_runs
-from mibici_mlops.modeling.evaluate import improvement_pct, peak_mask, score_frame
+from mibici_mlops.modeling.evaluate import peak_mask, score_frame
 from mibici_mlops.modeling.predict import KEYS, predict_frame
 from mibici_mlops.tracking import file_sha256
 
@@ -112,24 +112,14 @@ def train_candidate(name, train, valid, tuning_train, tuning_valid, data_tags):
 
 
 def register_best(experiment: str, dataset_sha256: str):
-    runs = load_runs(experiment)
-    if "tags.dataset_sha256" not in runs:
-        raise typer.BadParameter("No hay corridas con una versión de datos registrada")
-    runs = runs[runs["tags.dataset_sha256"] == dataset_sha256]
+    runs = load_runs(experiment, dataset_sha256)
     if runs.empty:
         raise typer.BadParameter("No hay corridas para este archivo de variables")
 
     table = comparison_table(runs)
-    baselines = table[table["tipo"] == "linea_base"]
-    if baselines.empty:
+    if not table["tipo"].eq("linea_base").any():
         raise typer.BadParameter("Ejecuta make baseline antes de registrar el modelo")
-    baseline = baselines.iloc[0]
-    improvement = improvement_pct(table[SELECTION_METRIC], baseline[SELECTION_METRIC])
-    eligible = table[
-        (table["tipo"] == "modelo")
-        & (improvement >= TARGET_IMPROVEMENT_PCT)
-        & (table["llegadas_mae_pico"] <= baseline["llegadas_mae_pico"])
-    ]
+    eligible = table[table["apto_registro"]]
     if eligible.empty:
         raise typer.BadParameter(
             "Ningún modelo cumple la meta de salidas y el criterio de llegadas"
@@ -142,17 +132,24 @@ def register_best(experiment: str, dataset_sha256: str):
         if version.run_id == run.info.run_id and version.status == "READY":
             return version
 
+    if not run.outputs or not run.outputs.model_outputs:
+        raise typer.BadParameter(f"La corrida {run.info.run_id} no guardó un modelo en MLflow")
     model_id = run.outputs.model_outputs[0].model_id
-    tags = {**run.data.params, **run.data.metrics, "dataset_sha256": dataset_sha256}
+    tags = {
+        **run.data.params,
+        **run.data.metrics,
+        "dataset_sha256": run.data.tags.get("dataset_sha256", dataset_sha256),
+        "validacion_sha256": dataset_sha256,
+    }
     return mlflow.register_model(f"models:/{model_id}", REGISTERED_MODEL_NAME, tags=tags)
 
 
 @app.command()
 def main(
     model: str = "all",
-    features_path: Annotated[Path, typer.Option(exists=True, dir_okay=False)] = (
-        PROCESSED_DATA_DIR / "variables_oficial.parquet"
-    ),
+    features_path: Annotated[
+        Path, typer.Option(exists=True, dir_okay=False)
+    ] = OFFICIAL_FEATURES_PATH,
     demand_path: Annotated[Path, typer.Option(exists=True, dir_okay=False)] = (
         PROCESSED_DATA_DIR / "demanda_estacion_hora_oficial.parquet"
     ),
@@ -202,6 +199,7 @@ def main(
     mlflow.set_experiment(experiment)
     data_tags = {
         "dataset_sha256": dataset_sha256,
+        "validacion_sha256": dataset_sha256,
         "demanda_sha256": file_sha256(demand_path),
     }
     for name in CANDIDATES if model == "all" else [model]:
