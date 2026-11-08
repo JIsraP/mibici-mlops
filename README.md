@@ -144,7 +144,7 @@ La primera etapa de modelado utiliza los archivos oficiales de 2025 y genera tre
 | Agregación de demanda | `features.py` | `v2_demanda_oficial` | Demanda por estación y hora |
 | Construcción de variables | `features.py` | `v3_variables_oficial` | Variables predictoras y preprocesador |
 | Validación de demanda | `validation.py` | `MiBici_Fase1_Validacion_Datos` | Reporte de nueve pruebas |
-| Líneas base | `modeling/train.py` | `MiBici_Fase1_Experimentos_Datos` | Comparación de modelos |
+| Líneas base | `modeling/baselines.py` | `MiBici_Fase2_Modelos` | Comparación de modelos |
 
 ### Ejecución de la Fase 1
 
@@ -165,10 +165,34 @@ python -m mibici_mlops.validation --variant oficial
 Para ejecutar posteriormente las líneas base:
 
 ```bash
-python -m mibici_mlops.modeling.train
+make baseline
 ```
 
 Los comandos de Makefile también están disponibles para automatizar las etapas correspondientes, según la configuración del proyecto.
+
+### Preparación de los datos para la Fase 2
+
+Desde la raíz del repositorio, con el entorno virtual activado, usa el mismo backend para todas las corridas locales:
+
+```bash
+export MLFLOW_TRACKING_URI=sqlite:///mlflow.db
+```
+
+Si ya tienes `data/processed/variables_oficial.parquet` del equipo, ejecuta `make baseline`. Si tienes los CSV oficiales con banderas, colócalos en `data/external/version_oficial/`, verifica que el catálogo esté en `data/raw/nomenclatura_2026_10.csv` y ejecuta `make oficial`, `python -m mibici_mlops.features --variant oficial --allow-missing-stations` y `make validate baseline`.
+
+Para reconstruir los CSV con banderas en un clon con solo los viajes de 2025 en `data/raw/`, ejecuta:
+
+```bash
+make download
+python scripts/check_duplicates.py
+python scripts/inspect_duplicates.py
+python scripts/clean_data.py
+python -m mibici_mlops.model_input --directory data/processed
+python -m mibici_mlops.features --variant oficial --allow-missing-stations
+make validate baseline
+```
+
+El catálogo de octubre de 2026 del portal no incluye la estación histórica 240. `--allow-missing-stations` conserva sus viajes y usa las medianas del catálogo para sus atributos numéricos y `SIN_ZONA` para la zona. `make validate` sigue reportando la estación ausente. Si tienes el catálogo de septiembre, indica su ruta con `MIBICI_STATIONS_FILE` y ejecuta `features` sin esa opción.
 
 ---
 
@@ -488,6 +512,7 @@ Los experimentos utilizados son:
 - `MiBici_Fase1_Versiones_Datos`: registro de las versiones de datos de la Fase 1.
 - `MiBici_Fase1_Validacion_Datos`: registro de las validaciones.
 - `MiBici_Fase1_Experimentos_Datos`: registro de líneas base y experimentos de modelado.
+- `MiBici_Fase2_Modelos`: líneas base oficiales y corridas de los modelos de la Fase 2.
 
 ### Versiones registradas en la Fase 1
 
@@ -530,13 +555,13 @@ Para trabajar localmente se utiliza una base de datos SQLite y la interfaz de ML
 Desde la raíz del repositorio, activar el entorno virtual y ejecutar:
 
 ```bash
-mlflow ui
+mlflow server --host 127.0.0.1 --port 5001 --backend-store-uri sqlite:///mlflow.db
 ```
 
 La interfaz se encuentra disponible en:
 
 ```text
-http://127.0.0.1:5000
+http://127.0.0.1:5001
 ```
 
 La configuración del proyecto utiliza `MLFLOW_TRACKING_URI` para indicar dónde registrar y consultar los experimentos.
@@ -572,7 +597,7 @@ Ejemplo de configuración utilizada para la Fase 1:
 
 ```env
 MIBICI_OFFICIAL_DIR=data/processed
-MLFLOW_TRACKING_URI=http://127.0.0.1:5000
+MLFLOW_TRACKING_URI=sqlite:///mlflow.db
 ```
 
 `MIBICI_OFFICIAL_DIR` indica dónde se encuentran los archivos mensuales oficiales de 2025.

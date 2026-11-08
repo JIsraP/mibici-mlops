@@ -28,7 +28,7 @@ REFERENCES_DIR = PROJ_ROOT / "references"
 MIBICI_BASE_URL = "https://mibici.net"
 URLS_FILE = REFERENCES_DIR / "urls_2025.txt"
 TRIPS_PATTERN = "datos_abiertos_2025_*.csv"
-STATIONS_FILE = RAW_DATA_DIR / "nomenclatura_2026_09.csv"
+STATIONS_FILE = Path(os.getenv("MIBICI_STATIONS_FILE", RAW_DATA_DIR / "nomenclatura_2026_10.csv"))
 
 # Nombres de columna normalizados (el encabezado original cambia de codificacion entre meses)
 TRIP_COLUMNS = [
@@ -64,10 +64,6 @@ MIN_STATION_TRIPS_PLOT = 1000
 
 # Particion temporal: entrenamiento enero-octubre, validacion noviembre-diciembre de 2025
 TRAIN_END = "2025-11-01"
-
-# Periodo de análisis para la demanda de 2025
-YEAR_START = "2025-01-01"
-YEAR_END = "2026-01-01"
 
 # Dias festivos oficiales de 2025 (Ley Federal del Trabajo, art. 74)
 HOLIDAYS_2025 = [
