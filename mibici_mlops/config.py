@@ -16,6 +16,7 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 INTERIM_DATA_DIR = DATA_DIR / "interim"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
+OFFICIAL_FEATURES_PATH = PROCESSED_DATA_DIR / "variables_oficial.parquet"
 
 MODELS_DIR = PROJ_ROOT / "models"
 
@@ -28,7 +29,7 @@ REFERENCES_DIR = PROJ_ROOT / "references"
 MIBICI_BASE_URL = "https://mibici.net"
 URLS_FILE = REFERENCES_DIR / "urls_2025.txt"
 TRIPS_PATTERN = "datos_abiertos_2025_*.csv"
-STATIONS_FILE = RAW_DATA_DIR / "nomenclatura_2026_09.csv"
+STATIONS_FILE = Path(os.getenv("MIBICI_STATIONS_FILE", RAW_DATA_DIR / "nomenclatura_2026_10.csv"))
 
 # Nombres de columna normalizados (el encabezado original cambia de codificacion entre meses)
 TRIP_COLUMNS = [
@@ -63,11 +64,8 @@ MAX_TRIP_MIN = 1440.0
 MIN_STATION_TRIPS_PLOT = 1000
 
 # Particion temporal: entrenamiento enero-octubre, validacion noviembre-diciembre de 2025
+TUNING_START = "2025-10-01"
 TRAIN_END = "2025-11-01"
-
-# Periodo de análisis para la demanda de 2025
-YEAR_START = "2025-01-01"
-YEAR_END = "2026-01-01"
 
 # Dias festivos oficiales de 2025 (Ley Federal del Trabajo, art. 74)
 HOLIDAYS_2025 = [
@@ -85,6 +83,7 @@ MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
 EXPERIMENT_DATA = "MiBici_Fase1_Versiones_Datos"
 EXPERIMENT_BASELINE = "MiBici_Fase1_Experimentos_Datos"
 EXPERIMENT_MODELS = "MiBici_Fase2_Modelos"
+REGISTERED_MODEL_NAME = "MiBici_Demanda"
 
 # Fase 2: metrica para elegir modelo y semilla comun para que las corridas sean reproducibles
 SELECTION_METRIC = "salidas_mae_pico"

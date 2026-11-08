@@ -50,7 +50,7 @@ def predict_baseline(name: str, train: pd.DataFrame, valid: pd.DataFrame) -> dic
     return {t: BASELINES[name](train, valid, t).to_numpy() for t in TARGETS}
 
 
-def log_baseline(name: str, features: pd.DataFrame, truth: pd.DataFrame, path: Path, params: dict):
+def log_baseline(name: str, features: pd.DataFrame, truth: pd.DataFrame, tags: dict, params: dict):
     train = features[features["particion"] == "entrenamiento"]
     valid = features[features["particion"] == "validacion"].reset_index(drop=True)
     # La linea base se ajusta con la variante elegida y se evalua contra la verdad oficial
@@ -59,7 +59,7 @@ def log_baseline(name: str, features: pd.DataFrame, truth: pd.DataFrame, path: P
     metrics = score_frame(truth, predictions)
 
     with mlflow.start_run(run_name=f"linea_base_{name}"):
-        mlflow.set_tags({"tipo": "linea_base", "dataset_sha256": file_sha256(path)})
+        mlflow.set_tags({"tipo": "linea_base", **tags})
         mlflow.log_params({"modelo": name, **params})
         mlflow.log_metrics(metrics)
         preds = truth[KEYS].assign(**{f"pred_{t}": p for t, p in predictions.items()})
@@ -77,15 +77,21 @@ def main(
     experiment: str = EXPERIMENT_MODELS,
 ):
     path = PROCESSED_DATA_DIR / f"variables_{variant}.parquet"
+    truth_path = PROCESSED_DATA_DIR / f"variables_{truth_variant}.parquet"
     features = pd.read_parquet(path)
-    truth = pd.read_parquet(PROCESSED_DATA_DIR / f"variables_{truth_variant}.parquet")
+    truth = features if path == truth_path else pd.read_parquet(truth_path)
     truth = truth[truth["particion"] == "validacion"].reset_index(drop=True)
 
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(experiment)
+    dataset_sha256 = file_sha256(path)
+    tags = {
+        "dataset_sha256": dataset_sha256,
+        "validacion_sha256": dataset_sha256 if path == truth_path else file_sha256(truth_path),
+    }
     params = {"variante_datos": variant, "variante_verdad": truth_variant}
     for name in BASELINES:
-        metrics = log_baseline(name, features, truth, path, params)
+        metrics = log_baseline(name, features, truth, tags, params)
         logger.info(f"{name}: " + ", ".join(f"{k}={v:.3f}" for k, v in metrics.items()))
 
 

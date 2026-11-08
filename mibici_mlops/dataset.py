@@ -68,7 +68,7 @@ def load_raw_trips(raw_dir: Path = RAW_DATA_DIR) -> tuple[pd.DataFrame, list[Raw
 
 
 def load_stations(path: Path = STATIONS_FILE) -> pd.DataFrame:
-    st = pd.read_csv(path).rename(
+    st = pd.read_csv(path, encoding=detect_encoding(path)).rename(
         columns={"id": "estacion_id", "name": "nombre", "dpcapacity": "capacidad"}
     )
     st["zona"] = st["nombre"].str.extract(r"\((\w+)-")[0].fillna("SIN_ZONA")

@@ -100,7 +100,9 @@ mibici_mlops/
 │   ├── plots.py             # Figuras del EDA
 │   ├── flagged_trips.py     # Análisis de viajes marcados
 │   └── modeling/
-│       └── train.py         # Líneas base y experimentos
+│       ├── baselines.py     # Líneas base
+│       ├── train.py         # Ajuste y entrenamiento de modelos
+│       └── predict.py       # Predicción por estación y hora
 ├── models/                  # Modelos generados
 ├── notebooks/               # Notebooks de análisis
 ├── references/              # Material de referencia y URLs
@@ -144,7 +146,7 @@ La primera etapa de modelado utiliza los archivos oficiales de 2025 y genera tre
 | Agregación de demanda | `features.py` | `v2_demanda_oficial` | Demanda por estación y hora |
 | Construcción de variables | `features.py` | `v3_variables_oficial` | Variables predictoras y preprocesador |
 | Validación de demanda | `validation.py` | `MiBici_Fase1_Validacion_Datos` | Reporte de nueve pruebas |
-| Líneas base | `modeling/train.py` | `MiBici_Fase1_Experimentos_Datos` | Comparación de modelos |
+| Líneas base | `modeling/baselines.py` | `MiBici_Fase2_Modelos` | Comparación de modelos |
 
 ### Ejecución de la Fase 1
 
@@ -165,10 +167,58 @@ python -m mibici_mlops.validation --variant oficial
 Para ejecutar posteriormente las líneas base:
 
 ```bash
-python -m mibici_mlops.modeling.train
+make baseline
 ```
 
 Los comandos de Makefile también están disponibles para automatizar las etapas correspondientes, según la configuración del proyecto.
+
+### Preparación de los datos para la Fase 2
+
+Desde la raíz del repositorio, con el entorno virtual activado, usa el mismo backend para todas las corridas locales:
+
+```bash
+export MLFLOW_TRACKING_URI=sqlite:///mlflow.db
+```
+
+Si ya tienes `data/processed/variables_oficial.parquet` del equipo, ejecuta `make baseline`. Si tienes los CSV oficiales con banderas, colócalos en `data/external/version_oficial/`, verifica que el catálogo esté en `data/raw/nomenclatura_2026_10.csv` y ejecuta `make oficial`, `python -m mibici_mlops.features --variant oficial --allow-missing-stations` y `make validate baseline`.
+
+Para reconstruir los CSV con banderas en un clon con solo los viajes de 2025 en `data/raw/`, ejecuta:
+
+```bash
+make download
+python scripts/check_duplicates.py
+python scripts/inspect_duplicates.py
+python scripts/clean_data.py
+python -m mibici_mlops.model_input --directory data/processed
+python -m mibici_mlops.features --variant oficial --allow-missing-stations
+make validate baseline
+```
+
+El catálogo de octubre de 2026 del portal no incluye la estación histórica 240. `--allow-missing-stations` conserva sus viajes y usa las medianas del catálogo para sus atributos numéricos y `SIN_ZONA` para la zona. `make validate` sigue reportando la estación ausente. Si tienes el catálogo de septiembre, indica su ruta con `MIBICI_STATIONS_FILE` y ejecuta `features` sin esa opción.
+
+### Entrenamiento y predicción de la Fase 2
+
+Con `variables_oficial.parquet` y `demanda_estacion_hora_oficial.parquet` en `data/processed/`, ejecuta estos pasos usando el mismo backend de MLflow:
+
+```bash
+make baseline && make train && make compare && make register
+```
+
+Se ajusta cada candidato con enero a septiembre y se eligen sus hiperparámetros con octubre. Después se reentrena con enero a octubre y se mide con noviembre y diciembre. Cada corrida guarda el pipeline de salidas y llegadas, las pruebas de ajuste, las métricas y las predicciones de validación en `MiBici_Fase2_Modelos`. La comparación escribe la tabla y las figuras en `reports/`.
+
+Si ya registraste las corridas, ejecuta `make compare && make register` para reutilizarlas. Ambos pasos filtran por la huella del Parquet de validación y usan el mismo criterio de selección. La columna `apto_registro` identifica los modelos que cumplen la meta y el criterio de llegadas.
+
+`make register` registra el mejor modelo en `MiBici_Demanda` con los hiperparámetros y métricas de su corrida. Se exige una mejora de al menos 15 % en el MAE de salidas en pico y que el MAE de llegadas en pico sea igual o menor que el de la línea base.
+
+Usa el URI versionado que muestra el registro para generar predicciones de un día a partir de un Parquet de variables ya preparado:
+
+```bash
+python -m mibici_mlops.modeling.predict 'models:/MiBici_Demanda/1' \
+  data/processed/variables_oficial.parquet data/processed/predicciones_dia.parquet \
+  --date 2025-11-03
+```
+
+Sin `--date`, se predicen todas las filas de la entrada. La salida contiene estación, fecha y hora, salidas estimadas y llegadas estimadas.
 
 ---
 
@@ -488,6 +538,7 @@ Los experimentos utilizados son:
 - `MiBici_Fase1_Versiones_Datos`: registro de las versiones de datos de la Fase 1.
 - `MiBici_Fase1_Validacion_Datos`: registro de las validaciones.
 - `MiBici_Fase1_Experimentos_Datos`: registro de líneas base y experimentos de modelado.
+- `MiBici_Fase2_Modelos`: líneas base oficiales y corridas de los modelos de la Fase 2.
 
 ### Versiones registradas en la Fase 1
 
@@ -530,13 +581,13 @@ Para trabajar localmente se utiliza una base de datos SQLite y la interfaz de ML
 Desde la raíz del repositorio, activar el entorno virtual y ejecutar:
 
 ```bash
-mlflow ui
+mlflow server --host 127.0.0.1 --port 5001 --backend-store-uri sqlite:///mlflow.db
 ```
 
 La interfaz se encuentra disponible en:
 
 ```text
-http://127.0.0.1:5000
+http://127.0.0.1:5001
 ```
 
 La configuración del proyecto utiliza `MLFLOW_TRACKING_URI` para indicar dónde registrar y consultar los experimentos.
@@ -572,7 +623,7 @@ Ejemplo de configuración utilizada para la Fase 1:
 
 ```env
 MIBICI_OFFICIAL_DIR=data/processed
-MLFLOW_TRACKING_URI=http://127.0.0.1:5000
+MLFLOW_TRACKING_URI=sqlite:///mlflow.db
 ```
 
 `MIBICI_OFFICIAL_DIR` indica dónde se encuentran los archivos mensuales oficiales de 2025.

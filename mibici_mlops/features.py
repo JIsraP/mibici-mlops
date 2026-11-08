@@ -20,6 +20,7 @@ from mibici_mlops.config import (
     HOLIDAYS_2025,
     INTERIM_DATA_DIR,
     PROCESSED_DATA_DIR,
+    STATIONS_FILE,
     TRAIN_END,
     YEAR_END,
     YEAR_START,
@@ -30,19 +31,19 @@ from mibici_mlops.tracking import DatasetVersioner, file_sha256
 app = typer.Typer()
 
 TARGETS = ["salidas", "llegadas"]
+STATION_NUMERIC = ["latitud", "longitud", "capacidad"]
 NUMERIC = [
     "hora",
     "hora_sin",
     "hora_cos",
     *[f"{t}_{lag}" for t in TARGETS for lag in ("lag_24", "lag_168", "media_7d")],
-    "latitud",
-    "longitud",
-    "capacidad",
+    *STATION_NUMERIC,
     "perfil_pc1",
     "perfil_pc2",
 ]
 BINARY = ["es_fin_semana", "es_festivo"]
 CATEGORICAL = ["dia_semana", "zona"]
+FEATURE_COLUMNS = NUMERIC + BINARY + CATEGORICAL
 
 
 def build_demand(trips: pd.DataFrame) -> pd.DataFrame:
@@ -124,7 +125,9 @@ class FeatureBuilder:
         shares = [prof[t].div(prof[t].sum(axis=1).replace(0, np.nan), axis=0) for t in TARGETS]
         return pd.concat(shares, axis=1, keys=TARGETS).fillna(0)
 
-    def fit_transform(self, demand: pd.DataFrame) -> pd.DataFrame:
+    def fit_transform(
+        self, demand: pd.DataFrame, allow_missing_stations: bool = False
+    ) -> pd.DataFrame:
         df = self.add_calendar(demand.copy())
         profiles = self.station_profiles(df)
 
@@ -139,18 +142,26 @@ class FeatureBuilder:
 
         df = self.add_lags(df)
         df = df.merge(
-            self.stations[["estacion_id", "latitud", "longitud", "capacidad", "zona"]],
+            self.stations[["estacion_id", *STATION_NUMERIC, "zona"]],
             on="estacion_id",
             how="left",
             validate="many_to_one",
         )
-        if df[["latitud", "longitud", "capacidad", "zona"]].isna().any().any():
-            raise ValueError("Hay estaciones sin atributos en el catálogo.")
+        missing = df[[*STATION_NUMERIC, "zona"]].isna().any(axis=1)
+        if missing.any():
+            station_ids = sorted(df.loc[missing, "estacion_id"].unique().tolist())
+            if not allow_missing_stations:
+                raise ValueError(f"Hay estaciones sin atributos en el catálogo: {station_ids}")
+            df[STATION_NUMERIC] = df[STATION_NUMERIC].fillna(
+                self.stations[STATION_NUMERIC].median()
+            )
+            df["zona"] = df["zona"].fillna("SIN_ZONA")
+            logger.warning(
+                f"Se imputaron atributos del catálogo para las estaciones {station_ids}"
+            )
         df = df.merge(pcs, left_on="estacion_id", right_index=True, how="left")
         df = df.dropna(subset=["salidas_lag_168", "llegadas_media_7d"])
-        required_features = NUMERIC + BINARY + CATEGORICAL
-
-        missing = df[required_features].isna().sum()
+        missing = df[FEATURE_COLUMNS].isna().sum()
         missing = missing[missing > 0]
 
         if not missing.empty:
@@ -177,7 +188,7 @@ def build_preprocessor() -> ColumnTransformer:
 
 
 @app.command()
-def main(variant: str = "oficial"):
+def main(variant: str = "oficial", allow_missing_stations: bool = False):
     trips = pd.read_parquet(INTERIM_DATA_DIR / f"viajes_limpios_{variant}.parquet")
     stations = load_stations()
     versioner = DatasetVersioner()
@@ -201,7 +212,7 @@ def main(variant: str = "oficial"):
     )
 
     builder = FeatureBuilder(stations)
-    features = builder.fit_transform(demand)
+    features = builder.fit_transform(demand, allow_missing_stations=allow_missing_stations)
     features_path = PROCESSED_DATA_DIR / f"variables_{variant}.parquet"
     features.to_parquet(features_path, index=False)
 
@@ -221,6 +232,9 @@ def main(variant: str = "oficial"):
             params={
                 "variante": variant,
                 "corte_entrenamiento": TRAIN_END,
+                "catalogo_estaciones": STATIONS_FILE.name,
+                "catalogo_sha256": file_sha256(STATIONS_FILE),
+                "permitir_estaciones_sin_catalogo": allow_missing_stations,
                 "variables_numericas": ",".join(NUMERIC),
                 "variables_categoricas": ",".join(CATEGORICAL),
                 "columnas_tras_preprocesar": n_out,

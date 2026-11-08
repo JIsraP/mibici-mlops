@@ -75,6 +75,12 @@ def main():
 
     print(f"IDs repetidos por investigar: {len(duplicate_ids)}")
 
+    if not duplicate_ids:
+        pd.DataFrame(columns=["archivo_origen", "Viaje_Id"]).to_csv(
+            OUTPUT_PATH, index=False, encoding="utf-8-sig"
+        )
+        return
+
     all_matches = []
     files = sorted(DATA_DIR.glob("datos_abiertos_*.csv"))
 

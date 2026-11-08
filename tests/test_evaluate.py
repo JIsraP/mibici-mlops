@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from mibici_mlops.modeling.compare import comparison_table, select_best
+from mibici_mlops.modeling.compare import comparison_table, load_runs, select_best
 from mibici_mlops.modeling.evaluate import (
     error_by,
     improvement_pct,
@@ -44,7 +44,9 @@ def test_predicciones_negativas_se_recortan_a_cero(frame):
 
 def test_nombres_listos_para_mlflow(frame):
     m = score_frame(frame, {"salidas": frame["salidas"], "llegadas": frame["llegadas"]})
-    assert set(m) == {f"{t}_{k}" for t in ("salidas", "llegadas") for k in ("mae", "rmse", "mae_pico", "poisson")}
+    assert set(m) == {
+        f"{t}_{k}" for t in ("salidas", "llegadas") for k in ("mae", "rmse", "mae_pico", "poisson")
+    }
     assert m["salidas_mae"] == 0
 
 
@@ -88,3 +90,33 @@ def test_tabla_compara_contra_la_mejor_linea_base():
 
 def test_solo_compiten_modelos():
     assert select_best(comparison_table(runs_df()))["modelo"] == "hgb"
+
+
+def test_corridas_de_la_misma_validacion(monkeypatch):
+    runs = pd.DataFrame(
+        {
+            "run_id": ["legacy", "misma_verdad", "otra_verdad", "fallida", "descartada"],
+            "status": ["FINISHED", "FINISHED", "FINISHED", "FAILED", "FINISHED"],
+            "tags.estado": [None, None, None, None, "descartada"],
+            "tags.dataset_sha256": ["oficial", "laxa", "oficial", "oficial", "oficial"],
+            "tags.validacion_sha256": [None, "oficial", "otra", "oficial", "oficial"],
+        }
+    )
+    monkeypatch.setattr("mibici_mlops.modeling.compare.mlflow.search_runs", lambda **kwargs: runs)
+    assert load_runs(dataset_sha256="oficial")["run_id"].tolist() == ["legacy", "misma_verdad"]
+
+
+def test_elegibilidad_usa_mejora_sin_redondear_y_mae_de_llegadas():
+    runs = runs_df()
+    runs["metrics.salidas_mae_pico"] = [1.0, 1.1, 0.8501, 0.8]
+    runs["metrics.llegadas_mae_pico"] = [1.0, 1.1, 0.9, 1.1]
+    candidate = runs.iloc[[3]].assign(
+        run_id="e", **{"params.modelo": "poisson", "metrics.salidas_mae_pico": 0.82}
+    )
+    candidate["metrics.llegadas_mae_pico"] = 0.95
+    table = comparison_table(pd.concat([runs, candidate]))
+    by_name = table.set_index("modelo")
+    assert by_name.loc["ridge", "mejora_vs_base_pct"] == 15.0
+    assert not bool(by_name.loc["ridge", "cumple_meta"])
+    assert not bool(by_name.loc["hgb", "apto_registro"])
+    assert select_best(table)["modelo"] == "poisson"
