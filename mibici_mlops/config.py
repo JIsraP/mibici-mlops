@@ -63,6 +63,7 @@ MAX_TRIP_MIN = 1440.0
 MIN_STATION_TRIPS_PLOT = 1000
 
 # Particion temporal: entrenamiento enero-octubre, validacion noviembre-diciembre de 2025
+TUNING_START = "2025-10-01"
 TRAIN_END = "2025-11-01"
 
 # Dias festivos oficiales de 2025 (Ley Federal del Trabajo, art. 74)
@@ -81,6 +82,7 @@ MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
 EXPERIMENT_DATA = "MiBici_Fase1_Versiones_Datos"
 EXPERIMENT_BASELINE = "MiBici_Fase1_Experimentos_Datos"
 EXPERIMENT_MODELS = "MiBici_Fase2_Modelos"
+REGISTERED_MODEL_NAME = "MiBici_Demanda"
 
 # Fase 2: metrica para elegir modelo y semilla comun para que las corridas sean reproducibles
 SELECTION_METRIC = "salidas_mae_pico"

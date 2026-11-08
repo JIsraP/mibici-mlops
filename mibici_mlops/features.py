@@ -43,6 +43,7 @@ NUMERIC = [
 ]
 BINARY = ["es_fin_semana", "es_festivo"]
 CATEGORICAL = ["dia_semana", "zona"]
+FEATURE_COLUMNS = NUMERIC + BINARY + CATEGORICAL
 
 
 def build_demand(trips: pd.DataFrame) -> pd.DataFrame:
@@ -151,14 +152,16 @@ class FeatureBuilder:
             station_ids = sorted(df.loc[missing, "estacion_id"].unique().tolist())
             if not allow_missing_stations:
                 raise ValueError(f"Hay estaciones sin atributos en el catálogo: {station_ids}")
-            df[STATION_NUMERIC] = df[STATION_NUMERIC].fillna(self.stations[STATION_NUMERIC].median())
+            df[STATION_NUMERIC] = df[STATION_NUMERIC].fillna(
+                self.stations[STATION_NUMERIC].median()
+            )
             df["zona"] = df["zona"].fillna("SIN_ZONA")
-            logger.warning(f"Se imputaron atributos del catálogo para las estaciones {station_ids}")
+            logger.warning(
+                f"Se imputaron atributos del catálogo para las estaciones {station_ids}"
+            )
         df = df.merge(pcs, left_on="estacion_id", right_index=True, how="left")
         df = df.dropna(subset=["salidas_lag_168", "llegadas_media_7d"])
-        required_features = NUMERIC + BINARY + CATEGORICAL
-
-        missing = df[required_features].isna().sum()
+        missing = df[FEATURE_COLUMNS].isna().sum()
         missing = missing[missing > 0]
 
         if not missing.empty:

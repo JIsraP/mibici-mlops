@@ -100,6 +100,16 @@ baseline-variants:
 	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.baselines --variant estricta --experiment MiBici_Fase1_Experimentos_Datos
 	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.baselines --variant laxa --experiment MiBici_Fase1_Experimentos_Datos
 
+## Ajustar y entrenar los modelos de demanda de la Fase 2
+.PHONY: train
+train:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train
+
+## Registrar en MLflow el mejor modelo que cumple los criterios de la Fase 2
+.PHONY: register
+register:
+	$(PYTHON_INTERPRETER) -m mibici_mlops.modeling.train --register-only
+
 ## Tabla y figuras comparativas de todas las corridas del experimento de modelos
 .PHONY: compare
 compare:
