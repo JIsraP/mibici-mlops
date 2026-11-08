@@ -1,11 +1,17 @@
 # MiBici MLOps
 
-Proyecto de análisis y preparación de datos del sistema MiBici de Guadalajara, Jalisco, México, aplicando prácticas de MLOps para organizar el procesamiento, la limpieza, la validación y el seguimiento de los experimentos.
+Proyecto de análisis, preparación y modelado de datos del sistema MiBici de Guadalajara, Jalisco, México, aplicando prácticas de MLOps para organizar el procesamiento, la limpieza, la validación y el seguimiento de experimentos.
 
-El objetivo es construir una base de datos confiable y reproducible que permita analizar el comportamiento histórico del sistema y sirva como punto de partida para desarrollar modelos de aprendizaje automático en etapas posteriores.
+El objetivo es construir una base de datos confiable y reproducible que permita analizar el comportamiento histórico del sistema y desarrollar modelos de aprendizaje automático para estudiar y predecir la demanda de viajes.
+
+El proyecto contempla tanto el análisis histórico como una primera etapa de modelado enfocada en los datos de enero a diciembre de 2025.
+
+Documentación relacionada:
 
 - Requerimientos y propuesta de valor: [docs/ml_canvas.md](docs/ml_canvas.md)
 - Bitácora de versiones de datos: [docs/versionado_datos.md](docs/versionado_datos.md)
+
+---
 
 ## Equipo 17
 
@@ -18,6 +24,8 @@ El objetivo es construir una base de datos confiable y reproducible que permita 
 
 La asignación de roles y su interacción se describen en el [ML Canvas](docs/ml_canvas.md#roles-responsables).
 
+---
+
 ## Objetivos del proyecto
 
 - Organizar los archivos históricos de viajes de MiBici.
@@ -28,7 +36,9 @@ La asignación de roles y su interacción se describen en el [ML Canvas](docs/ml
 - Realizar un análisis exploratorio de los viajes y las estaciones.
 - Utilizar MLflow para registrar parámetros, métricas y artefactos de los experimentos.
 - Mantener un flujo de trabajo reproducible y versionar el código mediante Git.
-- Construir la demanda por estación y hora de 2025, sus variables y las líneas base contra las que se compararán los modelos.
+- Construir la demanda por estación y hora de 2025.
+- Generar variables predictoras y preparar los datos para el entrenamiento de modelos.
+- Comparar distintas versiones de datos mediante experimentos y líneas base.
 
 ## Fuente de datos
 
@@ -38,7 +48,7 @@ https://www.mibici.net/es/datos-abiertos/
 
 El conjunto de datos está organizado en archivos CSV mensuales con información de los viajes registrados en el sistema.
 
-**Periodo analizado:** diciembre de 2014 a septiembre de 2026.
+**Periodo histórico analizado:** diciembre de 2014 a septiembre de 2026.
 
 **Archivos mensuales procesados:** 142.
 
@@ -46,18 +56,26 @@ El conjunto de datos está organizado en archivos CSV mensuales con información
 
 Las columnas utilizadas incluyen identificadores de viaje y usuario, género, año de nacimiento, fechas de inicio y finalización, estaciones de origen y destino, duración del viaje e indicadores de calidad.
 
-**Periodo para modelar en la Fase 1:** enero a diciembre de 2025. Enero a septiembre de 2026 queda reservado para probar el modelo fuera de tiempo en fases posteriores. El análisis del histórico completo sirve como contexto y justifica esa elección.
+**Periodo para modelar en la Fase 1:** enero a diciembre de 2025.
+
+Los datos de enero a septiembre de 2026 quedan reservados para probar el modelo fuera de tiempo en fases posteriores. El análisis del histórico completo sirve como contexto y justifica esta elección.
 
 ## Tecnologías utilizadas
 
 - **Python:** procesamiento, limpieza y análisis de datos.
 - **pandas:** manipulación de datos y procesamiento por bloques.
-- **Matplotlib:** visualización de resultados.
+- **NumPy:** operaciones numéricas y construcción de variables.
+- **Scikit-learn:** PCA, escalamiento y codificación de variables.
+- **Matplotlib y Seaborn:** visualización de resultados.
 - **Jupyter Notebook:** documentación del análisis exploratorio.
 - **MLflow:** seguimiento de experimentos, parámetros, métricas y artefactos.
+- **PyArrow:** almacenamiento de datos en formato Parquet.
+- **Joblib:** almacenamiento y recuperación de objetos de preprocesamiento.
 - **pytest:** ejecución de pruebas automatizadas.
 - **Ruff:** revisión estática y calidad del código.
 - **Git y GitHub:** control de versiones y colaboración.
+
+---
 
 ## Estructura del proyecto
 
@@ -67,32 +85,28 @@ El repositorio sigue una estructura basada en Cookiecutter Data Science, organiz
 mibici_mlops/
 ├── data/
 │   ├── raw/                 # Datos originales
-│   ├── interim/             # Datos intermedios (viajes limpios de 2025)
-│   ├── processed/           # Datos procesados y limpios; demanda y variables de 2025
-│   └── external/
-│       └── version_oficial/ # Versión oficial de 2025 con banderas, para modelar
-├── docs/                    # Documentación: ML Canvas y bitácora de versiones de datos
+│   ├── interim/             # Datos intermedios, viajes preparados
+│   ├── processed/           # Datos procesados, demanda y variables
+│   └── external/            # Datos externos
+├── docs/                    # ML Canvas y bitácora de versiones
 ├── mibici_mlops/            # Código del paquete del proyecto
-│   ├── config.py            # Rutas, fechas de corte, festivos y configuración de MLflow
-│   ├── dataset.py           # Descarga y lectura con detección de codificación
-│   ├── cleaning.py          # CleaningRules y TripCleaner: variantes estricta y laxa
-│   ├── model_input.py       # Lectura de la versión oficial con banderas
-│   ├── tracking.py          # DatasetVersioner: registro de versiones en MLflow
-│   ├── features.py          # Demanda por estación y hora, variables y preprocesador
-│   ├── validation.py        # Validación de la tabla de demanda
-│   ├── plots.py             # Figuras del EDA de 2025
-│   ├── flagged_trips.py     # EDA de viajes marcados
-│   └── modeling/train.py    # Líneas base para comparar versiones de datos
+│   ├── config.py            # Rutas, fechas, festivos y configuración
+│   ├── dataset.py           # Lectura de datos y catálogo de estaciones
+│   ├── cleaning.py          # Reglas y procesos de limpieza
+│   ├── model_input.py       # Entrada oficial de datos para modelar
+│   ├── tracking.py          # Registro de versiones en MLflow
+│   ├── features.py          # Demanda, variables y preprocesamiento
+│   ├── validation.py        # Validación de demanda
+│   ├── plots.py             # Figuras del EDA
+│   ├── flagged_trips.py     # Análisis de viajes marcados
+│   └── modeling/
+│       └── train.py         # Líneas base y experimentos
 ├── models/                  # Modelos generados
-├── notebooks/
-│   ├── 01_exploratory_data_analysis.ipynb          # EDA del histórico
-│   ├── 1.0-frg-exploracion-inicial.ipynb
-│   ├── 2.0-frg-limpieza-eda-modulos.ipynb
-│   └── 3.0-frg-version-oficial-validacion-marcados.ipynb
-├── references/              # Material de referencia y lista de URL de 2025
+├── notebooks/               # Notebooks de análisis
+├── references/              # Material de referencia y URLs
 ├── reports/                 # Reportes y resultados
-│   └── figures/             # Figuras del EDA de 2025
-├── scripts/                 # Descarga, diagnóstico, limpieza y validación del histórico
+│   └── figures/             # Figuras del EDA
+├── scripts/                 # Descarga, diagnóstico y procesamiento
 ├── tests/                   # Pruebas automatizadas
 ├── .gitignore
 ├── Makefile
@@ -101,38 +115,62 @@ mibici_mlops/
 └── README.md
 ```
 
-Los scripts de procesamiento y validación se encuentran organizados dentro del código del proyecto, de acuerdo con la implementación actual.
-
 Los directorios `data/` contienen los datos locales y están excluidos del control de versiones para evitar subir archivos de gran tamaño a GitHub.
+
+---
 
 ## Flujo de trabajo
 
 El procesamiento de datos sigue estas etapas generales:
 
 1. **Obtención de datos:** reunir los archivos mensuales descargados de la fuente oficial.
-2. **Inspección inicial:** revisar la estructura, las columnas, los tipos de datos y la cobertura temporal.
+2. **Inspección inicial:** revisar estructura, columnas, tipos de datos y cobertura temporal.
 3. **Diagnóstico de calidad:** identificar valores faltantes, registros duplicados, duraciones inconsistentes y otros problemas.
 4. **Limpieza:** aplicar reglas definidas para tratar duplicados y valores sospechosos.
-5. **Procesamiento:** guardar los archivos resultantes en `data/processed/`, trabajando por bloques cuando es necesario para controlar el uso de memoria.
-6. **Validación:** comprobar la integridad de los identificadores, las fechas, las duraciones y los indicadores de calidad.
+5. **Procesamiento:** guardar los archivos resultantes en los directorios correspondientes, trabajando por bloques cuando es necesario para controlar el uso de memoria.
+6. **Validación:** comprobar la integridad de identificadores, fechas, duraciones e indicadores de calidad.
 7. **Análisis exploratorio:** estudiar la evolución de los viajes, las estaciones y los problemas de calidad.
-8. **Seguimiento de experimentos:** registrar resultados relevantes en MLflow.
+8. **Construcción de demanda:** agregar salidas y llegadas por estación y hora.
+9. **Ingeniería de características:** generar variables de calendario, rezagos, atributos de estaciones y perfiles horarios.
+10. **Seguimiento de experimentos:** registrar las versiones, resultados y artefactos en MLflow.
 
-### Tubería de la Fase 1 para modelar 2025
+## Pipeline de la Fase 1 para modelar 2025
 
-Con la MLflow UI corriendo (`mlflow ui`, http://localhost:5000) y la versión oficial de 2025 en `data/external/version_oficial/`:
+La primera etapa de modelado utiliza los archivos oficiales de 2025 y genera tres versiones principales de datos.
 
-| Paso | Comando | Versión en MLflow |
-|---|---|---|
-| Descarga de 2025 | `make download` | |
-| Variantes de comparación (estricta y laxa) | `make data` | v0_crudo, v1_limpio_* |
-| Entrada del modelo desde la versión oficial | `make oficial` | v1_modelo_oficial |
-| Demanda y variables | `make features` | v2_demanda_*, v3_variables_* |
-| Validación de la tabla de demanda | `make validate` | experimento `MiBici_Fase1_Validacion_Datos` |
-| Líneas base | `make baseline` | experimento `MiBici_Fase1_Experimentos_Datos` |
-| Figuras del EDA y viajes marcados | `make plots` | `reports/figures/` |
+| Paso | Módulo | Versión en MLflow | Resultado |
+|---|---|---|---|
+| Entrada oficial de viajes | `model_input.py` | `v1_modelo_oficial` | Viajes preparados para modelar |
+| Agregación de demanda | `features.py` | `v2_demanda_oficial` | Demanda por estación y hora |
+| Construcción de variables | `features.py` | `v3_variables_oficial` | Variables predictoras y preprocesador |
+| Validación de demanda | `validation.py` | `MiBici_Fase1_Validacion_Datos` | Reporte de nueve pruebas |
+| Líneas base | `modeling/train.py` | `MiBici_Fase1_Experimentos_Datos` | Comparación de modelos |
 
-`make pipeline` ejecuta todos los pasos en orden.
+### Ejecución de la Fase 1
+
+Con el entorno virtual activado, los datos oficiales disponibles y el servidor de MLflow en funcionamiento, ejecutar desde la raíz del repositorio:
+
+```bash
+python -m mibici_mlops.model_input
+```
+
+```bash
+python -m mibici_mlops.features --variant oficial
+```
+
+```bash
+python -m mibici_mlops.validation --variant oficial
+```
+
+Para ejecutar posteriormente las líneas base:
+
+```bash
+python -m mibici_mlops.modeling.train
+```
+
+Los comandos de Makefile también están disponibles para automatizar las etapas correspondientes, según la configuración del proyecto.
+
+---
 
 ## Limpieza y preparación de los datos
 
@@ -141,19 +179,31 @@ El procesamiento contempla los siguientes aspectos:
 - Eliminación de duplicados exactos.
 - Identificación de valores faltantes en género y año de nacimiento.
 - Detección de años de nacimiento sospechosos.
-- Conversión de los valores de nacimiento inválidos a valores faltantes.
+- Conversión de valores de nacimiento inválidos a valores faltantes.
 - Cálculo y revisión de la duración de los viajes.
 - Identificación de duraciones iguales o menores que cero.
 - Identificación de viajes con duración superior a 24 horas.
+- Identificación de viajes fallidos.
 - Conservación de indicadores que permiten distinguir los registros problemáticos.
 
 En lugar de eliminar automáticamente todos los viajes con inconsistencias, se conservan indicadores para facilitar su análisis posterior. De esta forma, los registros se pueden estudiar sin perder información de manera innecesaria.
 
 ### Versión oficial de 2025 para modelar
 
-La versión limpia oficial conserva todos los viajes de 2025 y agrega `duracion_segundos`, `duracion_no_positiva`, `duracion_mayor_24h` y `viaje_fallido` (misma estación de origen y destino, con duración mayor que 0 y menor que 120 segundos). Para modelar solo se excluyen los viajes con `duracion_no_positiva`; los de más de 24 horas y los fallidos se conservan marcados. Las variantes estricta y laxa se mantienen en MLflow para comparar cuánto cambia el resultado con cada limpieza.
+La versión limpia oficial conserva los viajes de 2025 y agrega los siguientes campos:
 
-### Resultados del procesamiento
+- `duracion_segundos`
+- `duracion_no_positiva`
+- `duracion_mayor_24h`
+- `viaje_fallido`
+
+Se considera viaje fallido aquel que tiene la misma estación de origen y destino, con una duración mayor que cero y menor que 120 segundos.
+
+Para modelar solo se excluyen los viajes con `duracion_no_positiva`. Los viajes con duración superior a 24 horas y los fallidos se conservan marcados para permitir comparaciones posteriores.
+
+Las variantes estricta y laxa se mantienen en MLflow para comparar cuánto cambia el resultado con cada estrategia de limpieza.
+
+### Resultados del procesamiento histórico
 
 | Indicador | Resultado |
 |---|---:|
@@ -169,17 +219,198 @@ La versión limpia oficial conserva todos los viajes de 2025 y agrega `duracion_
 
 Los valores faltantes y las duraciones inconsistentes se documentan como características de calidad de los datos. Su presencia no implica necesariamente que todos los registros deban eliminarse.
 
-Las validaciones automatizadas también revisan la consistencia de las fechas, las duraciones calculadas y los indicadores asociados. La validación completa de fechas debe confirmarse después de aplicar correctamente el tratamiento de los distintos formatos encontrados en los archivos originales.
+---
+
+## Construcción de la demanda y variables predictoras
+
+Esta etapa utiliza la versión oficial de los viajes de 2025 para construir una tabla de demanda horaria y preparar las variables que se utilizarán en los modelos.
+
+### v1. Preparación de viajes
+
+El módulo `model_input.py` lee los archivos oficiales, normaliza sus columnas, conserva los indicadores de calidad y prepara los viajes para modelar.
+
+Resultados obtenidos:
+
+| Indicador | Resultado |
+|---|---:|
+| Viajes disponibles para modelar | 4,529,252 |
+| Viajes marcados con duración no positiva | 2,780 |
+| Viajes marcados con duración mayor a 24 horas | 6 |
+| Viajes marcados como fallidos | 123,158 |
+| Viajes excluidos para modelar | 2,780 |
+
+Los viajes fallidos y los de duración superior a 24 horas se conservan marcados. Esto permite evaluar posteriormente su influencia en los resultados.
+
+### v2. Demanda por estación y hora
+
+El módulo `features.py` agrega los viajes por estación y hora, calculando:
+
+- `salidas`: cantidad de viajes que comienzan en la estación durante esa hora.
+- `llegadas`: cantidad de viajes que terminan en la estación durante esa hora.
+- `neto`: diferencia entre llegadas y salidas.
+
+También se genera una cuadrícula horaria completa para todas las estaciones, asignando cero a las horas sin viajes.
+
+**Resultados obtenidos:**
+
+| Indicador | Resultado |
+|---|---:|
+| Estaciones | 371 |
+| Horas por estación | 8,760 |
+| Registros de demanda | 3,249,960 |
+| Salidas | 4,529,252 |
+| Llegadas | 4,529,245 |
+| Columnas | 5 |
+
+La diferencia de siete registros entre salidas y llegadas se explica porque siete viajes comenzaron el 31 de diciembre de 2025 y terminaron después de la medianoche del 1 de enero de 2026.
+
+Por consistencia con el periodo de análisis, las salidas se contabilizan cuando el viaje inicia en 2025 y las llegadas cuando el viaje termina en 2025.
+
+El resultado se almacena en:
+
+```text
+data/processed/demanda_estacion_hora_oficial.parquet
+```
+
+### v3. Construcción de variables predictoras
+
+A partir de la demanda horaria se generan variables para representar patrones temporales, comportamiento histórico y características de las estaciones.
+
+Las variables incluyen:
+
+**Calendario**
+- Hora del día.
+- Hora expresada mediante seno y coseno para representar su naturaleza cíclica.
+- Día de la semana.
+- Indicador de fin de semana.
+- Indicador de día festivo.
+- Mes.
+
+**Rezagos y promedios históricos**
+- Salidas y llegadas de hace 24 horas.
+- Salidas y llegadas de hace 168 horas.
+- Promedio de los siete valores históricos correspondientes a la misma hora de los siete días anteriores.
+
+Los rezagos utilizan exclusivamente observaciones anteriores a la hora que se desea predecir, evitando utilizar información futura.
+
+**Atributos de estaciones**
+- Latitud.
+- Longitud.
+- Capacidad.
+- Zona.
+
+**Perfiles horarios**
+- Dos componentes principales calculados mediante PCA a partir de los perfiles de salidas y llegadas de cada estación.
+- El PCA se ajusta utilizando información del periodo de entrenamiento.
+
+El preprocesamiento utiliza:
+
+- `StandardScaler` para las variables numéricas.
+- `OneHotEncoder` para las variables categóricas.
+- `passthrough` para las variables binarias.
+
+El preprocesador se ajusta exclusivamente con los datos de entrenamiento.
+
+### Resultados de las variables predictoras
+
+| Indicador | Resultado |
+|---|---:|
+| Registros generados | 3,187,632 |
+| Columnas originales | 25 |
+| Registros de entrenamiento | 2,644,488 |
+| Registros de validación | 543,144 |
+| Variables transformadas | 26 |
+| Valores nulos | 0 |
+| Valores infinitos | 0 |
+| Duplicados estación-hora | 0 |
+
+La separación temporal utiliza el corte configurado en `TRAIN_END = 2025-11-01`.
+
+| Partición | Periodo |
+|---|---|
+| Entrenamiento | 8 de enero al 31 de octubre de 2025 |
+| Validación | 1 de noviembre al 31 de diciembre de 2025 |
+
+Los primeros siete días se utilizan para construir el historial requerido por los rezagos de 168 horas. Por esta razón, las primeras observaciones disponibles para el modelo comienzan el 8 de enero.
+
+El archivo generado es:
+
+```text
+data/processed/variables_oficial.parquet
+```
+
+El preprocesador y el PCA se almacenan juntos en un archivo `preprocesador.joblib`.
+
+---
+
+## Validación de calidad de los datos
+
+La validación de la tabla de demanda se realiza mediante `mibici_mlops/validation.py`.
+
+El proceso compara los resultados agregados con los viajes que los originaron y comprueba la integridad temporal y estructural de la tabla.
+
+Se realizan nueve pruebas:
+
+| N.º | Prueba | Qué comprueba |
+|---:|---|---|
+| 1 | Horas completas por estación | Que cada estación tenga 8,760 horas. |
+| 2 | Sin estación-hora repetida | Que no existan duplicados. |
+| 3 | Horas dentro de 2025 | Que las fechas estén dentro del periodo. |
+| 4 | Salidas cuadran con viajes | Que las salidas coincidan con los viajes iniciados en 2025. |
+| 5 | Llegadas cuadran con viajes | Que las llegadas coincidan con los viajes terminados en 2025. |
+| 6 | Salidas por mes cuadran | Que los totales mensuales coincidan. |
+| 7 | Conteos no negativos | Que salidas y llegadas no tengan valores negativos. |
+| 8 | Neto = llegadas - salidas | Que el balance esté correctamente calculado. |
+| 9 | Estaciones en el catálogo | Que las estaciones utilizadas existan en el catálogo. |
+
+**Resultados obtenidos en la validación oficial:**
+
+| Indicador | Resultado |
+|---|---:|
+| Pruebas ejecutadas | 9 |
+| Pruebas aprobadas | 9 |
+| Pruebas fallidas | 0 |
+| Estaciones revisadas | 371 |
+| Horas esperadas por estación | 8,760 |
+| Registros estación-hora duplicados | 0 |
+| Registros fuera de rango | 0 |
+| Estaciones sin correspondencia | 0 |
+
+Las nueve pruebas se cumplieron.
+
+El reporte se genera en:
+
+```text
+reports/validacion_demanda_oficial.csv
+```
+
+También se registra como artefacto de MLflow en el experimento:
+
+```text
+MiBici_Fase1_Validacion_Datos
+```
+
+Además de estas nueve pruebas, se realizaron comprobaciones sobre el archivo de variables predictoras, incluyendo duplicados, valores nulos, valores infinitos y distribución de las particiones.
+
+---
 
 ## Análisis exploratorio de datos (EDA)
 
-El análisis exploratorio se documenta en:
+El análisis exploratorio se documenta principalmente en:
 
-`notebooks/01_exploratory_data_analysis.ipynb`
+```text
+notebooks/01_exploratory_data_analysis.ipynb
+```
 
 El notebook contiene revisiones y visualizaciones para comprender el comportamiento histórico del sistema y detectar patrones relevantes.
 
-El análisis por estación y hora de 2025, la validación de la tabla de demanda y el análisis de los viajes marcados se documentan en `notebooks/1.0-frg-exploracion-inicial.ipynb`, `notebooks/2.0-frg-limpieza-eda-modulos.ipynb` y `notebooks/3.0-frg-version-oficial-validacion-marcados.ipynb`; las figuras se guardan en `reports/figures/`.
+El análisis por estación y hora de 2025, la validación de la tabla de demanda y el análisis de los viajes marcados se documentan en:
+
+- `notebooks/1.0-frg-exploracion-inicial.ipynb`
+- `notebooks/2.0-frg-limpieza-eda-modulos.ipynb`
+- `notebooks/3.0-frg-version-oficial-validacion-marcados.ipynb`
+
+Las figuras se guardan en `reports/figures/`.
 
 ### Evolución de los viajes
 
@@ -229,7 +460,7 @@ Para reconstruir la evolución histórica de la red sería necesario disponer de
 
 ### Validación del catálogo de estaciones
 
-Se compararon los identificadores presentes en los viajes de enero a septiembre de 2026 con el catálogo disponible para septiembre de 2026.
+En el análisis histórico de 2026 se compararon los identificadores presentes en los viajes de enero a septiembre con el catálogo disponible para septiembre de 2026.
 
 | Indicador | Resultado |
 |---|---:|
@@ -243,31 +474,74 @@ La coincidencia entre los identificadores de los viajes y el catálogo es aproxi
 
 Los identificadores que no coinciden quedan documentados para su revisión. No se clasifican automáticamente como errores, ya que podrían existir diferencias entre versiones del catálogo o cambios históricos en las estaciones.
 
+Para la versión oficial de 2025 utilizada en la Fase 1, se comprobó que las 371 estaciones presentes en los viajes tienen correspondencia con el catálogo de 484 estaciones.
+
+---
+
 ## Seguimiento de experimentos con MLflow
 
-MLflow se utiliza para registrar los resultados relevantes del procesamiento y facilitar su trazabilidad.
+MLflow se utiliza para registrar los resultados relevantes del procesamiento y facilitar su trazabilidad y reproducibilidad.
 
-El experimento de limpieza se identifica como:
+Los experimentos utilizados son:
 
-`limpieza_mibici`
+- `limpieza_mibici`: seguimiento de las variantes de limpieza.
+- `MiBici_Fase1_Versiones_Datos`: registro de las versiones de datos de la Fase 1.
+- `MiBici_Fase1_Validacion_Datos`: registro de las validaciones.
+- `MiBici_Fase1_Experimentos_Datos`: registro de líneas base y experimentos de modelado.
 
-Para la Fase 1 con los datos de 2025 se usan además:
+### Versiones registradas en la Fase 1
 
-- `MiBici_Fase1_Versiones_Datos`: cada versión del dataset (v0 a v3) con su huella SHA-256, esquema y conteos.
-- `MiBici_Fase1_Validacion_Datos`: reportes de validación de la tabla de demanda.
-- `MiBici_Fase1_Experimentos_Datos`: líneas base calculadas con cada versión de datos.
+| Versión | Descripción |
+|---|---|
+| `v1_modelo_oficial` | Preparación de los viajes oficiales de 2025. |
+| `v2_demanda_oficial` | Agregación de salidas y llegadas por estación y hora. |
+| `v3_variables_oficial` | Variables predictoras, preprocesador y PCA. |
 
-Los registros de los experimentos pueden incluir:
+Cada registro puede incluir:
 
 - Parámetros y reglas de procesamiento.
 - Número de archivos y registros procesados.
 - Métricas de calidad de los datos.
-- Resultados de las validaciones.
-- Artefactos con tablas, gráficas y resúmenes relevantes.
+- Huellas SHA-256.
+- Esquemas de los conjuntos de datos.
+- Archivos Parquet y otros artefactos relevantes.
+
+En la ejecución de v3 se almacenaron:
+
+```text
+datos/
+├── esquema.csv
+└── preprocesador.joblib
+```
+
+El archivo `preprocesador.joblib` contiene:
+
+- El `ColumnTransformer` ajustado con los datos de entrenamiento.
+- El objeto PCA con dos componentes principales.
+
+Se comprobó que ambos objetos pueden descargarse desde MLflow y recuperarse mediante Joblib.
 
 El código que genera los resultados se mantiene en Git, mientras que MLflow conserva la evidencia de las ejecuciones. Los artefactos deben corresponder a resultados realmente generados y no a valores estimados manualmente.
 
-La ubicación del almacenamiento de MLflow depende de la configuración local del proyecto.
+### Configuración local de MLflow
+
+Para trabajar localmente se utiliza una base de datos SQLite y la interfaz de MLflow.
+
+Desde la raíz del repositorio, activar el entorno virtual y ejecutar:
+
+```bash
+mlflow ui
+```
+
+La interfaz se encuentra disponible en:
+
+```text
+http://127.0.0.1:5000
+```
+
+La configuración del proyecto utiliza `MLFLOW_TRACKING_URI` para indicar dónde registrar y consultar los experimentos.
+
+---
 
 ## Instalación y configuración
 
@@ -282,20 +556,45 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Para registrar en un servidor de MLflow distinto del local, copiar `.env.example` a `.env` y ajustar `MLFLOW_TRACKING_URI`.
+Para verificar las dependencias:
+
+```bash
+python -m pip check
+```
+
+### Variables de entorno
+
+El proyecto utiliza variables de entorno para configurar las rutas de datos y la conexión con MLflow.
+
+Se recomienda crear un archivo `.env` local, que no debe subirse al repositorio.
+
+Ejemplo de configuración utilizada para la Fase 1:
+
+```env
+MIBICI_OFFICIAL_DIR=data/processed
+MLFLOW_TRACKING_URI=http://127.0.0.1:5000
+```
+
+`MIBICI_OFFICIAL_DIR` indica dónde se encuentran los archivos mensuales oficiales de 2025.
+
+`MLFLOW_TRACKING_URI` indica la dirección del servidor de seguimiento de experimentos.
+
+La configuración de rutas se centraliza en `mibici_mlops/config.py`.
 
 ### Descarga de datos
 
-- `python scripts/download_data.py` consulta la página oficial, identifica todos los CSV disponibles y los descarga en `data/raw/`.
-- `make download` baja solo los 12 meses de 2025 y el catálogo de estaciones que usa la Fase 1, a partir de `references/urls_2025.txt`.
+- `python scripts/download_data.py` consulta la página oficial, identifica los CSV disponibles y los descarga en `data/raw/`.
+- `make download` descarga los 12 meses de 2025 y el catálogo de estaciones utilizado por la Fase 1, a partir de `references/urls_2025.txt`.
 
 Para abrir el proyecto en Jupyter, se puede utilizar el entorno configurado en VS Code y seleccionar el intérprete de `.venv`.
 
-Si se desea ejecutar el notebook desde la terminal y Jupyter está instalado, se puede utilizar:
+Si se desea ejecutar el notebook desde la terminal y Jupyter está instalado:
 
 ```bash
 jupyter notebook notebooks/01_exploratory_data_analysis.ipynb
 ```
+
+---
 
 ## Pruebas y calidad del código
 
@@ -313,9 +612,17 @@ Para revisar el código con Ruff:
 ruff check .
 ```
 
+Para comprobar la sintaxis de un módulo:
+
+```bash
+python -m compileall -q mibici_mlops/
+```
+
 Las pruebas y validaciones deben ejecutarse después de realizar cambios en los scripts para verificar que el procesamiento mantenga los resultados esperados.
 
 Las pruebas de registro de versiones (`tests/test_tracking.py`) se ejecutan sin descargar MiBici ni iniciar un servidor de MLflow: usan una base SQLite y artefactos temporales.
+
+---
 
 ## Control de versiones y manejo de datos
 
@@ -325,11 +632,15 @@ Los archivos originales y procesados se mantienen localmente y están excluidos 
 
 Esta separación permite mantener un repositorio ligero y evitar subir archivos de datos que pueden ocupar varios gigabytes.
 
-Forma de trabajo del equipo:
+### Forma de trabajo del equipo
 
-- `main` solo recibe cambios por pull request revisado por otro integrante; nadie aprueba el suyo.
-- Cada integrante trabaja en su rama y modifica lo que corresponde a su rol; las observaciones a otro rol se le hacen a quien lo ejerce.
-- La versión de cada dataset queda en MLflow con su huella SHA-256.
+- `main` solo recibe cambios por pull request revisado por otro integrante; nadie aprueba su propio trabajo.
+- Cada integrante trabaja en su rama y modifica lo que corresponde a su rol.
+- Las observaciones a otro rol se comunican a quien lo ejerce.
+- La versión de cada dataset queda registrada en MLflow con su huella SHA-256.
+- Los archivos `.env`, bases de datos locales y datos pesados no deben subirse a GitHub.
+
+---
 
 ## Limitaciones actuales
 
@@ -337,18 +648,27 @@ Forma de trabajo del equipo:
 - El catálogo disponible de estaciones no permite reconstruir por sí solo la red histórica.
 - Los identificadores que no coinciden entre viajes y catálogo requieren revisión.
 - Los valores faltantes y las duraciones inconsistentes necesitan interpretarse según su contexto.
-- La validación de fechas debe confirmarse considerando los distintos formatos presentes en los archivos.
 - Los patrones observados en el EDA son descriptivos y no demuestran causalidad.
+- Los viajes que terminan fuera del periodo de análisis se contabilizan de acuerdo con su fecha de llegada, por lo que los totales de salidas y llegadas pueden presentar pequeñas diferencias.
+- La validación integral actual de nueve pruebas se concentra en la tabla de demanda. La validación de variables predictoras se ha realizado mediante comprobaciones adicionales, y puede ampliarse con pruebas automatizadas específicas.
+- Los resultados de la Fase 1 corresponden al periodo de 2025 y no demuestran por sí solos el desempeño del modelo en periodos posteriores.
+- La configuración de MLflow descrita corresponde al entorno local de desarrollo; para colaboración o despliegue compartido se requiere configurar un servidor y almacenamiento accesibles para el equipo.
+
+---
 
 ## Próximas etapas
 
 Las siguientes actividades previstas para continuar el proyecto son:
 
-1. Confirmar que todas las validaciones automatizadas se ejecuten correctamente.
-2. Documentar y revisar las diferencias de calidad detectadas.
-3. Profundizar en el análisis histórico de viajes y estaciones.
-4. Completar el reporte final y la presentación ejecutiva.
-5. Preparar los datos y las métricas necesarias para las siguientes etapas de experimentación con modelos de aprendizaje automático.
+1. Completar las validaciones automatizadas de las variables predictoras.
+2. Ejecutar y comparar las líneas base de modelado.
+3. Evaluar el efecto de las distintas versiones y reglas de limpieza sobre el desempeño.
+4. Analizar los resultados de entrenamiento y validación temporal.
+5. Preparar pruebas fuera de tiempo utilizando datos posteriores a 2025.
+6. Completar el reporte final y la presentación ejecutiva.
+7. Documentar los resultados y las decisiones del equipo.
+
+---
 
 ## Licencia y uso de los datos
 
@@ -358,6 +678,8 @@ El código de este repositorio se distribuye bajo la licencia indicada en el arc
 
 ---
 
-**Proyecto:** MiBici MLOps  
-**Repositorio:** https://github.com/JIsraP/mibici-mlops  
+**Proyecto:** MiBici MLOps
+
+**Repositorio:** https://github.com/JIsraP/mibici-mlops
+
 **Fuente de datos:** https://www.mibici.net/es/datos-abiertos/

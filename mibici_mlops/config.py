@@ -49,6 +49,10 @@ OFFICIAL_PATTERN = "datos_abiertos_2025_*.csv"
 # Particion temporal: entrenamiento enero-octubre, validacion noviembre-diciembre de 2025
 TRAIN_END = "2025-11-01"
 
+# Periodo de análisis para la demanda de 2025
+YEAR_START = "2025-01-01"
+YEAR_END = "2026-01-01"
+
 # Dias festivos oficiales de 2025 (Ley Federal del Trabajo, art. 74)
 HOLIDAYS_2025 = [
     "2025-01-01",
@@ -61,7 +65,7 @@ HOLIDAYS_2025 = [
 ]
 
 # MLflow
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
 EXPERIMENT_DATA = "MiBici_Fase1_Versiones_Datos"
 EXPERIMENT_BASELINE = "MiBici_Fase1_Experimentos_Datos"
 
