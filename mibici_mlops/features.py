@@ -17,12 +17,12 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 import typer
 
 from mibici_mlops.config import (
-    DEMAND_END,
-    DEMAND_START,
     HOLIDAYS_2025,
     INTERIM_DATA_DIR,
     PROCESSED_DATA_DIR,
     TRAIN_END,
+    YEAR_END,
+    YEAR_START,
 )
 from mibici_mlops.dataset import load_stations
 from mibici_mlops.tracking import DatasetVersioner, file_sha256
@@ -48,9 +48,9 @@ CATEGORICAL = ["dia_semana", "zona"]
 def build_demand(trips: pd.DataFrame) -> pd.DataFrame:
     """Cuenta salidas y llegadas por estación y hora durante 2025."""
 
-    inicio_2025 = trips[(trips["inicio"] >= DEMAND_START) & (trips["inicio"] < DEMAND_END)]
+    inicio_2025 = trips[(trips["inicio"] >= YEAR_START) & (trips["inicio"] < YEAR_END)]
 
-    fin_2025 = trips[(trips["fin"] >= DEMAND_START) & (trips["fin"] < DEMAND_END)]
+    fin_2025 = trips[(trips["fin"] >= YEAR_START) & (trips["fin"] < YEAR_END)]
 
     out = inicio_2025.groupby(["origen_id", inicio_2025["inicio"].dt.floor("h")]).size()
 
@@ -62,8 +62,8 @@ def build_demand(trips: pd.DataFrame) -> pd.DataFrame:
     stations = np.union1d(inicio_2025["origen_id"].unique(), fin_2025["destino_id"].unique())
 
     hours = pd.date_range(
-        DEMAND_START,
-        pd.Timestamp(DEMAND_END) - pd.Timedelta(hours=1),
+        YEAR_START,
+        pd.Timestamp(YEAR_END) - pd.Timedelta(hours=1),
         freq="h",
     )
 

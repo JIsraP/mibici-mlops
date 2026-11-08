@@ -50,8 +50,8 @@ OFFICIAL_PATTERN = "datos_abiertos_2025_*.csv"
 TRAIN_END = "2025-11-01"
 
 # Periodo de análisis para la demanda de 2025
-DEMAND_START = "2025-01-01"
-DEMAND_END = "2026-01-01"
+YEAR_START = "2025-01-01"
+YEAR_END = "2026-01-01"
 
 # Dias festivos oficiales de 2025 (Ley Federal del Trabajo, art. 74)
 HOLIDAYS_2025 = [
