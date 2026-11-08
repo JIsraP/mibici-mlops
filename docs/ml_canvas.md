@@ -1,178 +1,199 @@
-# ML Canvas: predicción de demanda en MiBici
+# ML Canvas de MiBici
 
-Borrador del ML Canvas de la Fase 1 del proyecto (TC5044), organizado en los diez bloques de Louis Dorard. Documenta el problema, la propuesta de valor y el alcance técnico. Las propuestas se apoyan en la implementación actual; los puntos marcados como "Por decidir" requieren acuerdo del equipo.
+Actualización del Canvas con los resultados de la Fase 2. Equipo 17, 8 de noviembre de 2026.
 
-| Campo | Valor |
-|---|---|
-| Equipo | Equipo 17 |
-| Versión del canvas | 0.3 (borrador) |
-| Dataset | Datos abiertos MiBici, https://mibici.net/en/open-data/ |
-| Periodo de construcción | enero a diciembre de 2025 |
-| Periodo reservado | enero a septiembre de 2026 (prueba fuera de tiempo y monitoreo en fases posteriores) |
+El resultado histórico publicado del modelo de árboles reduce el error MAE en horas pico un 15.35 % en salidas y un 15.99 % en llegadas frente al promedio histórico. Cumple los dos criterios propuestos de evaluación. La versión evaluada ya está integrada en main. Falta reproducir sus resultados de forma independiente y verificar el registro y versión del modelo. El beneficio para el servicio y las personas aún debe demostrarse.
 
-## Vista rápida
-
-| Bloque | Resumen |
-|---|---|
-| 1. Propuesta de valor | Menos estaciones vacías o llenas en horas pico |
-| 2. Tarea de ML | Regresión: viajes que salen y llegan por estación y hora |
-| 3. Decisiones | Plan nocturno de redistribución para el día siguiente |
-| 4. Fuentes de datos | CSV mensuales de viajes y catálogo de estaciones |
-| 5. Recolección de datos | Publicación mensual del portal, registrada en MLflow |
-| 6. Variables | Calendario, rezagos de demanda, atributos de estación |
-| 7. Construcción de modelos | Un modelo global, reentrenamiento mensual |
-| 8. Predicciones | Lote diario con horizonte de 24 h |
-| 9. Evaluación offline | MAE y RMSE contra el promedio histórico, partición temporal |
-| 10. Monitoreo en vivo | Error real contra error esperado, deriva de datos |
+**Cómo leer los cambios:** El PDF muestra en azul los párrafos nuevos o modificados frente al Canvas original de `main` en [f5912eae](https://github.com/JIsraP/mibici-mlops/tree/f5912eae8a0f55d66c3238ae4b2a3621b67d0a7f); el texto conservado está en negro.
 
 ## 1. Propuesta de valor
 
-**Beneficiarias finales:** las personas que utilizan MiBici para sus traslados. **Usuario directo de la herramienta:** el responsable de operación y redistribución, que recibiría estimaciones de salidas y llegadas por estación y hora.
+Anticipar salidas y llegadas por estación y hora para que operación prepare el servicio con tiempo, considerando bicicletas y espacios disponibles.
 
-### Problema desde la experiencia de las personas
+Usuario directo: responsable de operación y redistribución.
 
-Una persona que necesita iniciar o terminar un traslado enfrenta incertidumbre cuando no encuentra una bicicleta utilizable o un espacio de devolución. Puede tener que esperar, caminar a otra estación, utilizar otro transporte o abandonar el intento. Al devolver una bicicleta, la falta de espacios puede obligarla a buscar otro punto y completar un trayecto adicional.
+Beneficiarios: personas que utilizan o intentan utilizar MiBici.
 
-Estas situaciones pueden ocasionar retrasos, pérdida de conexiones, gastos imprevistos y menor confianza para organizar el día. Son afectaciones plausibles que justifican estudiar el problema; no son consecuencias cuantificadas en el dataset actual.
+Buscamos contribuir a traslados más confiables. Para demostrar el beneficio hacen falta datos de disponibilidad y una evaluación de la experiencia de uso.
 
-Las preguntas frecuentes de MiBici contemplan el caso de una estación sin puertos disponibles y la búsqueda de otra estación o la espera [1]. Esto documenta una situación de servicio, pero no su frecuencia ni el número de personas afectadas. El EDA muestra diferencias por horario y estación [3, 4]; no permite afirmar, sin evidencia adicional, que correspondan a traslados entre zonas habitacionales y de oficinas o a estaciones que quedaron vacías o llenas.
+La evaluación histórica publicada reporta un modelo que cumple la meta de error. Esto apoya seguir evaluando la propuesta; su utilidad operativa aún debe comprobarse.
 
-### Valor esperado y alcance
-
-La solución busca anticipar cuántos viajes registrados saldrán y llegarán por estación y hora durante el día siguiente. Esa información podría ayudar al supervisor a revisar necesidades operativas con anticipación. Se espera que, al combinarla con disponibilidad y recursos operativos, contribuya a reducir búsquedas y esperas evitables y a dar mayor certeza a los traslados. Esa relación entre pronóstico, intervención y beneficio requiere una evaluación posterior.
-
-En la Fase 1 se trabaja en la preparación de datos, el análisis exploratorio y la evaluación con líneas base. La salida prevista para etapas posteriores es una tabla de viajes estimados por estación y hora. La priorización de estaciones, las cantidades de traslado, las rutas y la operación en tiempo real quedan fuera de esta fase.
-
-Sin inventario disponible, capacidad utilizable y movimientos de redistribución no se puede determinar si una estación quedará vacía o llena. Tampoco se puede medir con los viajes registrados cuántas personas esperaron o abandonaron el servicio.
-
-**Por decidir:** confirmar el alcance de la Fase 1 y si una etapa posterior se limita al pronóstico o incorpora recomendaciones de priorización con datos operativos adicionales.
+Negocio conecta las necesidades de las personas con los criterios de evaluación. El equipo revisa resultados y límites. También se consideran estaciones de bajo uso: pocos viajes no prueban poca necesidad.
 
 ## 2. Tarea de aprendizaje automático
 
-Tipo: regresión supervisada sobre series de tiempo, con conteos por estación y hora. Se propone un modelo global que aprenda de las series de todas las estaciones, como se describe en el bloque 7.
+Regresión supervisada: predecir salidas y llegadas por estación y hora.
 
-Entrada: estación, fecha y hora, más el historial de viajes disponible al emitir el pronóstico.
+Entradas: estación, fecha, hora e historial disponible al emitir el pronóstico.
 
-Salida: dos valores por estación y hora: viajes que salen (`Origen_Id`) y viajes que llegan (`Destino_Id`). Se pronostican viajes registrados, no personas distintas ni toda la demanda que intentó usar el servicio.
-
-El indicador derivado se define como **balance de viajes = llegadas − salidas**. Describe el efecto neto de los viajes sobre la cantidad de bicicletas; no equivale al inventario real, porque no incluye la cantidad inicial, los traslados operativos ni las bicicletas fuera de servicio. Un saldo al final de una hora tampoco indica si la estación se agotó en algún momento intermedio.
-
-La documentación técnica del equipo describe una granularidad de una hora y dos variables objetivo: salidas y llegadas. Se propone conservar esta estructura y usar el balance como indicador derivado, sin agregar una clasificación de riesgo en esta fase.
-
-**Por decidir:** confirmar la granularidad horaria y las dos variables objetivo, o ajustar el alcance a franjas de 30 minutos o a la predicción del balance.
+Se estiman viajes registrados. La diferencia entre llegadas y salidas no indica bicicletas disponibles ni demanda no atendida.
 
 ## 3. Decisiones
 
-Se propone que el supervisor revise la estimación de viajes para cada hora del día siguiente y la compare con las bicicletas disponibles, los espacios libres y las condiciones de cada estación. Así podría identificar qué estaciones necesitan atención y en qué horarios. El supervisor tomaría la decisión final, considerando el personal y los vehículos disponibles para mover bicicletas, las necesidades de mantenimiento y cualquier situación que los datos no reflejen, como cierres viales o eventos.
+Uso futuro: operación revisaría las salidas y llegadas previstas junto con bicicletas, espacios y recursos disponibles.
 
-Este es un uso futuro del pronóstico. La Fase 1 no genera ni asigna rutas de camioneta y el balance de viajes, por sí solo, no basta para decidir cuántas bicicletas trasladar. Las franjas de 07:00 a 09:59 y de 18:00 a 20:59 se conservan como periodos de interés propuestos por el equipo, sujetos a revisión con el EDA.
+Consideraría horas pico, mantenimiento y eventos. La decisión seguiría en manos del responsable de operación.
 
-### Criterios sociales para una etapa posterior
-
-Se propone no priorizar estaciones únicamente por su volumen histórico. Un uso bajo puede relacionarse con menor demanda, disponibilidad insuficiente u otras barreras; el dataset de viajes no permite distinguir esas causas. La operación tendría que definir criterios de cobertura y niveles mínimos de servicio, revisar estaciones nuevas y analizar diferencias entre zonas y horarios, considerando también las conexiones con otros transportes.
-
-Para orientar esas decisiones se necesitarían datos operativos y evidencia de las necesidades de las personas. No se deben inferir condiciones socioeconómicas individuales a partir del patrón de viajes de una estación.
-
-### Evidencia del análisis exploratorio
-
-El mapa del EDA muestra balances distintos entre estaciones durante las mañanas de lunes a viernes. Esto respalda estudiar ambos flujos, salidas y llegadas, para apoyar una revisión operativa posterior [4].
-
-![Balance promedio matutino de viajes por estación](../reports/figures/06_mapa_desbalance_manana.png)
-
-*Figura del EDA del equipo. Periodo de 07:00 a 09:59 de lunes a viernes. Azul: más llegadas que salidas; rojo: más salidas que llegadas. Aunque la leyenda original use expresiones como «acumula» o «se vacía», el mapa no demuestra que una estación haya quedado llena o vacía y no representa disponibilidad en tiempo real.*
-
-**Por decidir:** acordar con la operación los criterios de priorización y los datos necesarios si se aborda esta función en una etapa posterior.
+Fase 2: acordar cómo evaluar el pronóstico. Las rutas y cantidades de traslado quedan fuera de esta fase.
 
 ## 4. Fuentes de datos
 
-- Viajes: archivos `datos_abiertos_AAAA_MM.csv`, uno por mes, de diciembre de 2014 a septiembre de 2026. Columnas: `Viaje_Id`, `Usuario_Id`, `Genero`, `Año_de_nacimiento`, `Inicio_del_viaje`, `Fin_del_viaje`, `Origen_Id`, `Destino_Id`. Un mes ronda los 33 MB.
-- Estaciones: `nomenclatura_2026_09.csv`, catálogo con identificador, nombre y ubicación de cada estación.
-- Calendario: días festivos de 2025 incorporados al código.
+CSV mensuales de viajes MiBici. Base de trabajo: 2025. Propuesta: reservar enero a septiembre de 2026 para una prueba final.
 
-La implementación actual utiliza los viajes de 2025, el catálogo disponible de estaciones y el calendario de festivos. Se propone evaluar la incorporación de clima en una fase posterior. El catálogo de 2026 no reconstruye el inventario histórico de 2025.
+Catálogo de estaciones y calendario de festivos. Comprobar que la versión del catálogo corresponda al periodo analizado y cubra las estaciones.
 
-Por decidir: confirmar el periodo de trabajo y si el clima se incorpora en esta fase o se deja para una etapa posterior.
+Los viajes no permiten conocer bicicletas o espacios disponibles, esperas ni abandonos. El clima queda como ampliación posterior por acordar.
 
 ## 5. Recolección de datos
 
-El portal publica un archivo por mes. Los archivos crudos se guardan en `data/raw/` sin modificar y no se suben a GitHub (están en `.gitignore`). Cada descarga se registra en MLflow con nombre de archivo, número de filas y hash SHA-256, de modo que cualquier integrante pueda comprobar que trabaja con los mismos datos.
+Conservar los archivos originales e identificar su periodo y versión para que el equipo trabaje con los mismos datos.
 
-Cuando se publique un mes nuevo, se descarga, se registra y entra al siguiente reentrenamiento.
+Revisar cobertura, duplicados y duración. Excluir viajes con duración no positiva; conservar y marcar los mayores de 24 horas para su revisión.
+
+Agrupar salidas y llegadas por estación y hora. Incorporar nuevos meses solo después de validar su calidad.
 
 ## 6. Variables
 
-Se construyen a partir de la tabla agregada por estación y hora:
+Hora, día de semana, fin de semana, mes y festivos.
 
-- Calendario: hora del día, día de la semana, fin de semana, festivo y mes. El código agrega estas columnas; el preprocesador selecciona las que utiliza.
-- Rezagos de la propia serie: demanda de la misma hora el día anterior y la semana anterior; promedio móvil de los últimos 7 días.
-- Atributos de la estación: zona, latitud, longitud y capacidad registrada en el catálogo.
-- Perfil de uso: proporciones de salidas y llegadas por hora, resumidas con dos componentes de PCA ajustados solo con entrenamiento.
+Viajes de la misma hora del día y semana anteriores y promedio de esa hora en los siete días previos. Usar solo información disponible al predecir.
 
-Las columnas de persona (`Usuario_Id`, `Genero`, `Año_de_nacimiento`) no entran como variables del modelo de demanda; se usan solo en el EDA de forma agregada.
+Ubicación, zona y capacidad de estación, si el catálogo es válido para el periodo. La capacidad no indica espacios libres.
+
+Excluir identificador, género y año de nacimiento de las personas usuarias.
 
 ## 7. Construcción de modelos
 
-- Línea base: promedio histórico de la misma estación, día de la semana y hora. Todo modelo debe superarla para justificarse.
-- Candidatos: regresión lineal regularizada y un modelo de árboles con boosting (por ejemplo, `HistGradientBoostingRegressor` de scikit-learn).
-- Un solo modelo global para todas las estaciones, con la estación como variable, en lugar de un modelo por estación.
-- Reentrenamiento mensual, cuando entra un archivo nuevo. Cada entrenamiento queda como corrida en MLflow con parámetros, métricas y la versión de datos usada.
+Fase 2: comparar modelos de salidas y llegadas con los mismos datos y criterios, en un proceso que el equipo pueda repetir.
+
+La línea base es una referencia sencilla para evaluar los modelos. Las referencias publicadas son el promedio histórico y la misma hora de la semana anterior.
+
+La elección se apoya en el error de salidas y llegadas. El resultado histórico del HGB Poisson cumple ambos criterios; su uso operativo aún debe comprobarse.
+
+Actualizar cada mes es una propuesta sujeta a datos nuevos validados. No hay un servicio operativo comprobado.
 
 ## 8. Predicciones
 
-Lote nocturno: a las 23:00 se generan las predicciones de las 24 horas siguientes para todas las estaciones. No se requiere predicción en tiempo real para el caso de uso. El resultado es una tabla estación por hora que alimenta el plan de rutas.
+En Fase 2 se comparan predicciones con viajes registrados para comprobar el desempeño con datos históricos.
+
+Salida: tabla con estación, fecha, hora, salidas y llegadas previstas.
+
+Emitir a las 23:00 para las siguientes 24 horas es una propuesta futura. El uso diario requiere datos más recientes que los archivos mensuales.
+
+Esta fase no exige poner el servicio en operación ni ofrecerlo en tiempo real.
 
 ## 9. Evaluación offline
 
-- Partición temporal, nunca aleatoria: entrenar con enero a octubre de 2025, validar con noviembre y diciembre de 2025. Los meses de 2026 quedan intactos.
-- Métricas: MAE y RMSE sobre los conteos por estación y hora; MAE en horas pico de días laborales (7, 8, 9, 18, 19 y 20 horas).
-- Criterio de éxito: reducir el MAE de la línea base al menos un 15 % en horas pico (meta inicial, a revisar con los resultados).
-- Revisión por segmentos: estaciones de mucho y poco uso, días laborales y fines de semana.
+Entrenamiento final: enero a octubre de 2025. Validación histórica: noviembre y diciembre. La prueba de enero a septiembre de 2026 sigue como propuesta.
+
+Modelo HGB Poisson publicado: error absoluto medio en horas pico (MAE) de 1.24 salidas y 1.16 llegadas, frente a 1.47 y 1.39 del promedio histórico. Viajes por estación y hora; cifras redondeadas.
+
+Reducción del MAE pico: 15.35 % en salidas y 15.99 % en llegadas. Cumple la meta histórica de reducir 15 % salidas sin empeorar llegadas. Pico: 7, 8, 9, 18, 19 y 20 h, lunes a viernes. No demuestra mejora operativa.
 
 ## 10. Monitoreo en vivo
 
-- Comparar cada día el error real contra el error esperado de la validación.
-- Vigilar deriva en la distribución de viajes por hora y por estación (estaciones nuevas, estaciones dadas de baja, cambios de patrón por vacaciones).
-- Disparar reentrenamiento antes de tiempo si el MAE de una semana supera en 25 % al de validación.
-- En la Fase 1 esto queda solo diseñado; se implementa en fases posteriores con los datos de 2026.
+Etapa futura: revisar el error, los datos faltantes, las estaciones nuevas y los cambios de uso. Se propone revisar el modelo si el error semanal supera en 25 % al de validación; el umbral debe validarse.
+
+Para comprobar menos esperas o abandonos hacen falta disponibilidad y experiencias de usuarios. Un menor error predictivo no demuestra por sí solo una mejora social.
+
+## Respaldo de la propuesta
+
+### Qué sabemos y qué falta demostrar
+
+Los viajes registrados permiten estudiar el uso por estación y hora. No incluyen todas las personas que intentaron usar el servicio ni muestran el inventario real. El balance es llegadas menos salidas; faltan las bicicletas iniciales, los movimientos de redistribución y las bicicletas fuera de servicio para reconstruir disponibilidad.
+
+Las preguntas frecuentes de MiBici contemplan buscar otra estación o esperar si no hay puertos disponibles [1]. Esto respalda la necesidad de estudiar el problema, pero no cuantifica su frecuencia. El análisis exploratorio muestra diferencias por estación y horario [2]; no permite atribuirlas por sí solas a falta de bicicletas, condiciones socioeconómicas o trayectos entre zonas habitacionales y de oficinas.
+
+El pronóstico podría apoyar una revisión humana de estaciones y horarios junto con disponibilidad y recursos. No asigna rutas ni cantidades de traslado. Para demostrar menos búsquedas, esperas o abandonos se deben combinar datos de disponibilidad y evidencia de la experiencia de uso. Las reducciones de error aquí reportadas no son porcentajes de mejora del servicio, disponibilidad ni personas beneficiadas.
+
+### Datos y preparación
+
+- Fuente: CSV mensuales de MiBici. Base de trabajo de la evaluación: viajes de 2025 y calendario de festivos. Conservar originales en `data/raw/`, fuera de GitHub, e identificar archivo, periodo, filas y huella SHA-256.
+- Revisar cobertura, duplicados, faltantes y consistencia temporal. Excluir duraciones no positivas y conservar con marca los viajes mayores de 24 horas.
+- Usar la misma hora del día y semana anteriores (24 y 168 horas), más el promedio de esa hora en los siete días previos. Solo se puede usar historia disponible al emitir cada pronóstico, también durante un posible horizonte futuro de 24 horas.
+- La documentación previa considera el catálogo de septiembre de 2026. Los cambios de ingeniería de ML, integrados mediante PR10, incorporan la opción del catálogo de octubre de 2026, donde falta la estación 240, y una imputación opcional. Su presencia en el código no demuestra que se haya utilizado en todas las ejecuciones. Registrar la versión y el tratamiento efectivamente usados, y revisar cobertura y vigencia histórica.
+- La capacidad del catálogo no equivale a espacios libres. El clima no tiene una fuente ni un uso acordados para esta actualización.
+- El identificador, género y año de nacimiento de las personas no se incluyen como variables del modelo. Las transformaciones aprendidas, incluido un posible resumen del perfil horario con PCA, deben ajustarse solo con entrenamiento.
+
+### Diseño de evaluación
+
+El código integrado usa enero a septiembre de 2025 para ajustar modelos y octubre para seleccionar sus parámetros. Después vuelve a entrenar con enero a octubre y evalúa con noviembre y diciembre de 2025, con inicio de validación el 1 de noviembre. Se deben mantener separados los periodos de ajuste y de evaluación final.
+
+Reservar enero a septiembre de 2026 para una prueba fuera de tiempo sigue como propuesta; no se presenta como una prueba ejecutada. La reproducción independiente de los resultados publicados aún debe confirmarse.
+
+### Resultados históricos publicados
+
+La línea base es una referencia sencilla contra la cual evaluar los modelos. Se comparan el promedio histórico por estación, día de semana y hora, la misma hora de la semana anterior, una regresión Poisson regularizada y un modelo de árboles HGB con pérdida Poisson.
+
+Fuente de los resultados: [comparación publicada](https://github.com/JIsraP/mibici-mlops/blob/f4231ecb27d74ad53634c835794c1b620eb0c352/reports/comparacion_modelos.csv), commit `f4231ecb27d74ad53634c835794c1b620eb0c352` de `main`, integrado mediante PR10. MAE y RMSE se expresan en viajes por estación y hora; un valor menor indica menos error. Las tablas siguientes redondean a cinco decimales. La lámina redondea errores a dos decimales y porcentajes a dos, pero el cumplimiento de criterios se evalúa con los valores completos.
+
+| Referencia | Objetivo | MAE | RMSE | MAE pico |
+|---|---|---:|---:|---:|
+| Promedio histórico | Salidas | 0.85614 | 1.54562 | 1.46875 |
+| Promedio histórico | Llegadas | 0.81776 | 1.48786 | 1.38628 |
+| Misma hora de la semana anterior | Salidas | 0.98996 | 1.90877 | 1.60830 |
+| Misma hora de la semana anterior | Llegadas | 0.94237 | 1.82921 | 1.49692 |
+
+| Resultado del modelo HGB Poisson | Promedio histórico MAE pico | Modelo MAE pico | Reducción del error |
+|---|---:|---:|---:|
+| Salidas | 1.46875 | 1.24332 | 15.35 % |
+| Llegadas | 1.38628 | 1.16461 | 15.99 % |
+
+Valores completos de MAE pico: salidas 1.2433171820564155 frente a 1.4687480367821895; llegadas 1.1646059691845259 frente a 1.3862827653315408. La reducción relativa se calcula como `(referencia - modelo) / referencia × 100`: 15.348504 % en salidas y 15.990734 % en llegadas, redondeadas a seis decimales.
+
+La meta propuesta exige reducir al menos 15 % el MAE pico de salidas sin empeorar el MAE pico de llegadas. El umbral de salidas es 1.248435831264861 viajes por estación y hora. El resultado publicado del HGB cumple ambos criterios. La regresión Poisson regularizada no cumple la meta. Esto constituye evidencia de evaluación histórica; no acredita despliegue ni mejora operativa real.
+
+### Selección y registro
+
+En la versión `f4231ecb`, comparación y registro comparten tabla y criterios. Las corridas comparables se filtran por la huella del conjunto de validación (`validacion_sha256`), con compatibilidad con `dataset_sha256` para corridas antiguas sin mezclar conjuntos. Se verifica el 15 % sin redondear y la condición de no empeorar el MAE pico de llegadas. La selección prioriza candidatos elegibles que cumplen ambas condiciones.
+
+El CSV marca el HGB con `apto_registro=True`. Significa que cumple los requisitos para registrarlo según la comparación publicada; **no demuestra que exista una versión efectiva en Model Registry**. El servidor, el registro y la versión deben verificarse independientemente.
+
+Identificadores publicados en el CSV:
+
+- HGB Poisson: `53a5aaec4e66405ca818cdb47ef4aa3f`.
+- Promedio histórico: `f41a09a0f88e4889bb99ae4e10574a02`.
+- Semana anterior: `ae9e147420d645d3b5d0a20d21d03708`.
+- Poisson regularizado: `9333cfdd26ee45c7a6a4effcd28e3e52`.
+
+El resultado global no asegura una mejora uniforme en cada estación y horario. Revisar desgloses de salidas y llegadas, estaciones de alto y bajo uso y fines de semana antes de definir un uso operativo. No se presenta el diagnóstico anterior de la línea base como un diagnóstico del modelo nuevo.
+
+### Alcance técnico de Fase 2
+
+La consigna [3] contempla estructura Cookiecutter, refactorización, preparación y estimador en un Pipeline de scikit-learn, comparación de modelos e hiperparámetros y uso de MLflow Tracking y Model Registry. No exige despliegue ni fija algoritmos o un número específico de modelos.
+
+El entrenamiento publicado integra un Pipeline de scikit-learn. El README integrado documenta una secuencia de preparación de referencias, entrenamiento, comparación y registro (`make baseline && make train && make compare && make register`). Hay pruebas de comparabilidad y elegibilidad integradas. La reproducción completa y su verificación independiente siguen pendientes.
+
+Los entregables de Fase 2 incluyen PDF ejecutivo, repositorio con participación de todos y video de hasta cinco minutos. La emisión a las 23:00, el horizonte de 24 horas, la actualización mensual y la alerta de 25 % de error son diseños futuros por validar, no compromisos operativos ni logros.
 
 ## Roles responsables
 
-Los integrantes y sus datos institucionales se encuentran en el [README](../README.md#equipo-17).
+La responsabilidad de negocio está confirmada. Las otras asignaciones se conservan como antecedentes o propuestas por ratificar para Fase 2.
 
-La siguiente asignación es una propuesta para revisión del equipo. Orienta las tareas pendientes y no sustituye la evidencia de las aportaciones realizadas. Cada integrante puede apoyar otros roles.
-
-| Rol | Responsable propuesto | Actividades en la Fase 1 | Bloques del Canvas |
-|---|---|---|---|
-| Responsable de negocio y del Canvas | Joel Rodríguez Becerril | Coordinar la definición del problema y la propuesta de valor y cerrar los acuerdos de alcance | 1, 3 |
-| Data engineer | José Israel Pérez Ontiveros | Organizar la descarga e inspección de los datos, revisar su cobertura y calidad, documentar las reglas de limpieza y consolidar el PDF con las evidencias del equipo | 4, 5 y documentación |
-| Data scientist | Francisco Gabriel Rodríguez González | Realizar el EDA, construir la demanda por estación y hora, preparar las variables y comparar las variantes de datos mediante las líneas base | 2, 6, 9 |
-| ML engineer (validación y trazabilidad) | Ricardo Portilla Corona | Corregir el registro y la reutilización de versiones en MLflow, agregar y ejecutar pruebas de reintentos y revisar la consistencia de la documentación | 7, 8, 10 y validación transversal |
-
-Interacción entre roles: Joel coordina los acuerdos del problema y del alcance. José Israel prepara los datos y documenta su calidad; Francisco utiliza esas versiones para el análisis, las variables y las líneas base. Ricardo comprueba la trazabilidad y las pruebas del flujo y devuelve los hallazgos a los responsables de datos y análisis. Cada integrante aporta sus resultados y evidencias para que José Israel consolide la presentación en PDF; el equipo completo la revisa antes de entregarla.
-
-En esta fase, los bloques de construcción de modelos, predicciones y monitoreo describen el diseño para etapas posteriores. La asignación de ML Engineering no implica implementar todavía el modelo final, el servicio de predicción ni el monitoreo en producción.
-
-Por decidir: confirmar o ajustar esta distribución de roles y las tareas pendientes antes de cerrar la entrega.
-
-## Historial de cambios
-
-| Versión | Fecha | Cambio |
+| Rol | Referencia de responsabilidad | Aportación e interacción propuesta |
 |---|---|---|
-| 0.1 | 2026-10-23 | Definición inicial de los diez bloques |
-| 0.2 | 2026-10-23 | Propuestas de alcance y del rol de validación; revisión de variables y métricas frente al código |
-| 0.3 | 2026-10-23 | Registro de integrantes y propuesta de responsables, actividades e interacción de los roles |
+| Negocio y Canvas | Rol confirmado | Conectar necesidades de las personas, alcance y criterios de valor; revisar resultados y límites con el equipo |
+| Data engineer | José Israel Pérez Ontiveros, asignación previa | Compartir versiones de datos y reglas de calidad; acordar cobertura y periodos |
+| Data scientist | Francisco Gabriel Rodríguez González, asignación previa | Definir métricas y comparación de salidas y llegadas; compartir resultados con ingeniería y negocio |
+| ML engineer | Ricardo Portilla Corona, propuesta previa por ratificar | Integrar preparación, entrenamiento, predicción y registro; entregar resultados que el equipo pueda reproducir |
+
+El equipo debe ratificar responsables e intercambios, revisar la reproducción de los modelos y confirmar su registro y versión. Las propuestas de roles no atribuyen ejecución ni compromisos que no estén documentados.
+
+## Fuentes
+
+- [Canvas original](https://github.com/JIsraP/mibici-mlops/blob/f5912eae8a0f55d66c3238ae4b2a3621b67d0a7f/docs/ml_canvas.md), base del resaltado de cambios.
+- [Resultados de la Fase 2](https://github.com/JIsraP/mibici-mlops/blob/f4231ecb27d74ad53634c835794c1b620eb0c352/reports/comparacion_modelos.csv), integrados en `main` mediante [PR10](https://github.com/JIsraP/mibici-mlops/pull/10), commit `f4231ecb27d74ad53634c835794c1b620eb0c352`.
+- [Entrenamiento](https://github.com/JIsraP/mibici-mlops/blob/f4231ecb27d74ad53634c835794c1b620eb0c352/mibici_mlops/modeling/train.py), [criterio de selección](https://github.com/JIsraP/mibici-mlops/blob/f4231ecb27d74ad53634c835794c1b620eb0c352/mibici_mlops/modeling/compare.py) y [README](https://github.com/JIsraP/mibici-mlops/blob/f4231ecb27d74ad53634c835794c1b620eb0c352/README.md) de la misma versión.
+- [Consigna de Fase 2][3], con acceso institucional.
+
+## Actualización
+
+Actualización del Canvas con los resultados de la Fase 2.
 
 ## ML Canvas visual
 
-![Machine Learning Canvas de MiBici — Equipo 17](canvas_mibici.png)
+[PDF del Canvas actualizado](Canvas_MiBici_Fase_2.pdf)
 
-[Ver imagen en tamaño completo](canvas_mibici.png)
-
-## Pendientes para la entrega
-
-- Acordar los puntos marcados como "Por decidir" y confirmar o ajustar la asignación propuesta de roles.
-- Verificar la evidencia de participación y los commits de todos los integrantes.
-- Ejecutar el pipeline completo y conservar la evidencia de MLflow con los datos seleccionados.
-- Preparar la presentación ejecutiva en PDF con las cinco etapas, resultados, roles y conclusiones.
-- Incorporar al PDF la declaración de uso de IA de todos los integrantes. Para esta aportación se utilizó ChatGPT/Codex (GPT-6) como apoyo en revisión de código, depuración del registro de versiones, elaboración de pruebas y documentación.
-
+[1]: https://www.mibici.net/es/preguntas-frecuentes/
+[2]: https://github.com/JIsraP/mibici-mlops/blob/f5912eae8a0f55d66c3238ae4b2a3621b67d0a7f/notebooks/1.0-frg-exploracion-inicial.ipynb
+[3]: https://experiencia21.tec.mx/courses/708335/assignments/23606020
