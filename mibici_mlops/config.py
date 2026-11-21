@@ -90,6 +90,32 @@ SELECTION_METRIC = "salidas_mae_pico"
 TARGET_IMPROVEMENT_PCT = 15.0  # meta inicial del ML Canvas frente a la linea base
 RANDOM_SEED = int(os.getenv("MIBICI_SEED", "42"))
 
+# Entrega final: monitoreo de data drift (data scientist)
+# Viajes de 2026 reservados desde la Fase 1; se usan como datos de monitoreo reales
+MONITOR_RAW_DIR = Path(os.getenv("MIBICI_MONITOR_DIR", RAW_DATA_DIR / "2026"))
+MONITOR_PATTERN = "datos_abiertos_2026_*.csv"
+HOLIDAYS_2026 = [
+    "2026-01-01",
+    "2026-02-02",
+    "2026-03-16",
+    "2026-05-01",
+    "2026-09-16",
+    "2026-11-16",
+    "2026-12-25",
+]
+EXPERIMENT_DRIFT = "MiBici_Final_Drift"
+# PSI: menos de 0.10 estable, 0.10 a 0.25 advertencia, 0.25 o mas alerta (convencion usual)
+PSI_WARN = 0.10
+PSI_ALERT = 0.25
+# Aumento del MAE pico frente a la validacion que dispara advertencia y alerta
+DEGRADATION_WARN_PCT = 10.0
+DEGRADATION_ALERT_PCT = 20.0
+# Sesgo del pronostico (total pronosticado contra observado), en cualquier direccion
+BIAS_WARN_PCT = 10.0
+BIAS_ALERT_PCT = 20.0
+# Participacion de estaciones sin perfil ni catalogo en la demanda del mes
+NEW_STATIONS_ALERT_PCT = 5.0
+
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135
 try:
