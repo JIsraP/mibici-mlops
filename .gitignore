@@ -1,5 +1,8 @@
 # Data
-/data/
+/data/*
+!/data/processed/
+/data/processed/*
+!/data/processed/*.dvc
 
 # Mac OS-specific storage files
 .DS_Store

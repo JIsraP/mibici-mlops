@@ -1,0 +1,5 @@
+outs:
+- md5: 2877fd931ab153a4477b90e72fd3d3dc
+  size: 23218131
+  hash: md5
+  path: variables_oficial.parquet
