@@ -1,22 +1,42 @@
-ipython
-jupyterlab
-loguru
-matplotlib
+# Data processing
+pandas==3.1.0
+numpy==2.4.6
+pyarrow==25.0.1
+
+# Machine Learning
+scikit-learn==1.9.1
+joblib==1.6.0
+
+# Experiment tracking
 mlflow==3.17.1
-notebook
-numpy
-pandas
-pyarrow
-pip
-pytest
-python-dotenv
-requests
-ruff
-scikit-learn
-seaborn
-tqdm
-typer
+
+# Visualization
+matplotlib==3.11.2
+seaborn==0.13.2
+
+# Data ingestion
+requests==2.34.2
+beautifulsoup4==4.15.0
+
+# Data versioning
+dvc==3.67.1
+
+# Configuration and logging
+python-dotenv==1.2.4
+loguru==0.7.3
+
+# CLI and progress
+typer==0.28.0
+tqdm==4.70.1
+
+# Notebooks
+ipython==9.17.1
+jupyterlab==4.6.6
+notebook==7.6.5
+
+# Development and testing
+pytest==9.1.1
+ruff==0.17.2
+
+# Local package
 -e .
-beautifulsoup4
-pandas
-mlflow
