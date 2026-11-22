@@ -21,6 +21,8 @@ Documentación relacionada:
 - Requerimientos y propuesta de valor: [docs/ml_canvas.md](docs/ml_canvas.md)
 
 - Bitácora de versiones de datos: [docs/versionado_datos.md](docs/versionado_datos.md)
+- API, exportacion del modelo, Docker y verificacion de predicciones: [docs/serving.md](docs/serving.md)
+- Secciones del ML engineer para integrar al reporte: [docs/ml_engineer_final.md](docs/ml_engineer_final.md)
 
 
 

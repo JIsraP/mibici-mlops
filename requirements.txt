@@ -9,6 +9,13 @@ joblib==1.6.0
 
 # Experiment tracking
 mlflow==3.17.1
+skops==0.16.0
+
+# API and serving tests
+fastapi==0.142.4
+pydantic==2.13.2
+uvicorn==0.54.0
+httpx==0.28.1
 
 # Visualization
 matplotlib==3.11.2

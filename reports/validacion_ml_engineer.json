@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-21",
+  "base_commit": "e853329",
+  "command": ".test-venv/bin/python -m pytest -q",
+  "passed": 44,
+  "failed": 0,
+  "new_tests": 14,
+  "previous_tests": 30,
+  "python": "3.12.13",
+  "packages": {
+    "fastapi": "0.142.4",
+    "pydantic": "2.13.2",
+    "uvicorn": "0.54.0",
+    "httpx": "0.28.1",
+    "skops": "0.16.0",
+    "numpy": "2.4.4",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.8.0",
+    "mlflow": "3.17.0",
+    "pytest": "9.0.2",
+    "pyarrow": "23.0.1",
+    "joblib": "1.5.3"
+  },
+  "scope": "Pruebas locales con un modelo pequeno entrenado con datos sinteticos y persistido en skops.",
+  "docker_executed": false,
+  "final_team_model_verified": false,
+  "dockerhub_published": false,
+  "dependency_note": "Este entorno de verificacion difiere de las versiones fijadas en requirements.txt. Se requiere comprobacion final con el artefacto y el entorno del equipo."
+}
